@@ -103,7 +103,9 @@ fwx_init:
 		[ "$$ROOTFS_SIZE" -gt 300 ] && EXPAND_ROOT=1 || EXPAND_ROOT=0; \
 		echo "EXPAND_ROOT=$$EXPAND_ROOT" >> "$$FEATURE_FILE"; \
 	fi ;\
-	cp feeds_patches/* feeds/ -fr
+	@sh "$(TOPDIR)/fanchmwrt/scripts/apply-feeds-overlays.sh" \
+		--source "$(TOPDIR)/fanchmwrt/overlays/feeds" \
+		--destination "$(TOPDIR)/feeds"
 		
 # check prerequisites before starting to build
 prereq: fwx_init $(target/stamp-prereq) tmp/.prereq_packages
