@@ -1,47 +1,48 @@
+<p align="center">
+  <img src="package/fanchmwrt/luci-theme-fanchmwrt/htdocs/luci-static/fanchmwrt/logo.svg" alt="FanchmWrt" width="160">
+</p>
 
+<h1 align="center">FanchmWrt</h1>
 
-## About
-FanchmWrt is an open-source enterprise-grade router system.  
-This project is based on OpenWrt and incorporates some firewall features.    
-Several popular device firmwares have been released and are available for download at [www.fanchmwrt.com](https://www.fanchmwrt.com).   
-You can also compile firmwares for other models yourself.
+<p align="center">基于 OpenWrt 构建体系、将网络策略与 LuCI 定制明确分层的开源固件构建项目。</p>
 
-## Development
-You can compile the fanchmwrt firmware yourself, Ubuntu 22 is recommended.
-Please include the repository address when re-releasing firmware.
+<p align="center">
+  <a href="docs/getting-started/download-and-flash.md">下载与刷写</a> ·
+  <a href="docs/README.md">文档中心</a> ·
+  <a href="docs/build/quick-start.md">构建指南</a> ·
+  <a href="SUPPORT.md">获取支持</a> ·
+  <a href="CONTRIBUTING.md">参与贡献</a>
+</p>
 
-### Requirements
-You need the following tools to compile FanchmWrt the same as OpenWrt, the package names vary between
-distributions. A complete list with distribution specific packages is found in
-the [Build System Setup](https://openwrt.org/docs/guide-developer/build-system/install-buildsystem)
-documentation.
+## 从这里开始
 
+- 初次接触项目：阅读[项目概览](docs/getting-started/overview.md)与[支持边界](docs/getting-started/supported-devices.md)。
+- 准备刷写：先核对设备、镜像 Profile 和分区布局，再阅读[下载与刷写](docs/getting-started/download-and-flash.md)。
+- 准备编译：从[构建环境](docs/build/environment.md)开始，Ubuntu 22.04 是推荐环境。
+- 需要维护定制内容：参阅[定制层架构](docs/architecture/customization-layer.md)与[软件包和设备开发](docs/development/package-and-device-work.md)。
+
+## FanchmWrt 定制能力
+
+以下能力由仓库内的 FanchmWrt 软件包、覆盖层或 LuCI 主题承担；实际是否进入某个镜像取决于所选配置。
+
+- **网络与设备管理**：`fwx` 内核模块与 `fwxd` 用户态组件构成网络策略和运行时管理的基础。
+- **应用策略**：`fwxd` 的应用分类和策略配置为按应用维度的网络控制提供构建输入。
+- **仪表盘与历史**：LuCI 相关组件可为状态展示与历史记录类功能提供界面接入；具体功能以启用的软件包为准。
+- **LuCI 主题**：`luci-theme-fanchmwrt` 提供 FanchmWrt 的本地主题资源。
+
+## 快速构建
+
+在已准备好的 Linux 构建环境中执行：
+
+```sh
+./scripts/feeds update -a
+./scripts/feeds install -a
+make menuconfig
+make -j"$(nproc)" V=s
 ```
-binutils bzip2 diff find flex gawk gcc-6+ getopt grep install libc-dev libz-dev
-make4.1+ perl python3.7+ rsync subversion unzip which
-```
 
-### Quickstart
-Compiling FanchmWrt is the same as compiling OpenWrt; please refer to the OpenWrt compilation tutorial.
+完整的环境准备、feed 固定版本和故障排查说明见[构建文档](docs/build/quick-start.md)。Windows 工作区只用于静态检查；完整固件构建与刷写验收应在 Linux 环境完成。
 
-1. Run `./scripts/feeds update -a` to obtain all the latest package definitions
-   defined in feeds.conf / feeds.conf.default
+## 许可
 
-2. Run `./scripts/feeds install -a` to install symlinks for all obtained
-   packages into package/feeds/
-
-3. Run `make menuconfig` to select your preferred configuration for the
-   toolchain, target system & firmware packages.
-
-4. Run `make` to build your firmware. This will download all sources, build the
-   cross-compile toolchain and then cross-compile the GNU/Linux kernel & all chosen
-   applications for your target system.
-
-## License
-
-FanchmWrt is licensed under GPL-2.0
-
-## Upstream Repository
-https://github.com/openwrt/openwrt
-
-
+本项目采用 [GPL-2.0](LICENSES/GPL-2.0) 许可。OpenWrt 上游背景与同步边界见[项目概览](docs/getting-started/overview.md)。
