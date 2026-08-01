@@ -1,24 +1,21 @@
-# FanchmWrt build customizations
+# FanchmWrt 构建定制层
 
-This directory holds FanchmWrt-specific build customizations that are not
-OpenWrt package definitions.
+此目录存放 FanchmWrt 自有、但不属于 OpenWrt 软件包定义的构建定制内容。
 
-- `overlays/feeds/` contains files merged into the checked-out feed tree.
-- `scripts/apply-feeds-overlays.sh` copies those overlays into the build's
-  `feeds/` directory.
-- `tests/test-apply-feeds-overlays.sh` verifies that the overlay script merges
-  files safely and that the Makefile invokes it as a separate recipe command.
+- `overlays/feeds/`：会合并到已检出 feed 树中的覆盖文件。
+- `scripts/apply-feeds-overlays.sh`：将覆盖文件复制到构建目录的 `feeds/`。
+- `tests/test-apply-feeds-overlays.sh`：验证覆盖脚本安全合并文件，并验证
+  Makefile 将它作为独立配方命令调用。
 
-## Updating the external feed pin
+## 更新外部 feed 固定版本
 
-Resolve the current `main` revision through a direct Git connection without
-setting a proxy:
+通过直连 Git、且不设置代理，解析 `main` 的当前版本：
 
 ```sh
 git -c http.proxy= -c https.proxy= ls-remote \
   https://github.com/fanchmwrt/fanchmwrt-packages.git refs/heads/main
 ```
 
-Use the returned 40-character commit ID to replace only the revision after
-`^` in the `src-git fanchmwrt` line in `feeds.conf.default`. Review the diff
-and run the focused overlay test before committing the pin update.
+使用返回的 40 位提交 ID，只替换 `feeds.conf.default` 中
+`src-git fanchmwrt` 行内 `^` 之后的版本号。提交该更新前，请审阅差异并运行
+覆盖脚本的聚焦测试。
