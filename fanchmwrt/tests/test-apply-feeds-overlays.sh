@@ -22,4 +22,21 @@ if "$script" >/dev/null 2>&1; then
   exit 1
 fi
 
+awk '
+  /^\t@sh ".*apply-feeds-overlays\.sh"/ {
+    found = 1
+    if (previous ~ /\\$/) {
+      print "FAIL: feed overlay command is continued into the preceding shell recipe" > "/dev/stderr"
+      exit 1
+    }
+  }
+  { previous = $0 }
+  END {
+    if (!found) {
+      print "FAIL: separate feed overlay recipe command was not found" > "/dev/stderr"
+      exit 1
+    }
+  }
+' "$root_dir/Makefile"
+
 echo 'PASS: feed overlays are merged safely'

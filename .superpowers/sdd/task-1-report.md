@@ -70,3 +70,56 @@ PASS: feed overlays are merged safely
 ## Concerns
 
 None.
+
+## Follow-up fix: separate the Makefile recipe command
+
+### Fix
+
+The `fwx_init` feature-update recipe ended with `fi ;\`, which caused the following tab-prefixed `@sh` line to be appended to the same shell command. The shell consequently received `@sh`, rather than Make interpreting `@` as recipe silencing. Removed only that trailing continuation marker so the explicit overlay invocation starts its own recipe command.
+
+The existing focused shell test now also inspects the root `Makefile`: it requires the overlay invocation to begin with a tab-prefixed `@sh` recipe line and fails if the immediately preceding recipe line ends in a continuation backslash.
+
+### TDD evidence
+
+#### RED
+
+Command:
+
+```text
+bash fanchmwrt/tests/test-apply-feeds-overlays.sh
+```
+
+Output (exit code 1, before the Makefile fix):
+
+```text
+FAIL: feed overlay command is continued into the preceding shell recipe
+```
+
+#### GREEN
+
+Command:
+
+```text
+bash fanchmwrt/tests/test-apply-feeds-overlays.sh && sh -n fanchmwrt/scripts/apply-feeds-overlays.sh && sh -n fanchmwrt/tests/test-apply-feeds-overlays.sh && git diff --check
+```
+
+Output (exit code 0):
+
+```text
+PASS: feed overlays are merged safely
+```
+
+### Additional command attempted
+
+```text
+make -n fwx_init
+```
+
+This could not complete in the current Windows Git Bash environment (exit code 2) because the selected Windows `make.exe` passes repository paths such as `D:` to `cmd.exe` and prerequisite/config recipes then fail. The focused Makefile boundary assertion above does complete and verifies the reviewed defect directly.
+
+### Follow-up self-review
+
+- The test failed before the production edit for the reported continuation defect.
+- The production change is limited to removing the one continuation character that merged two recipe commands.
+- The test confirms both required parts of the integration contract: the overlay line is a recipe command (`@sh`) and its predecessor does not continue into it.
+- The merge/preservation and missing-arguments tests remain covered by the same test script.

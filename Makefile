@@ -102,7 +102,7 @@ fwx_init:
 		case "$$ROOTFS_SIZE" in ''|*[!0-9]*) ROOTFS_SIZE=0 ;; esac; \
 		[ "$$ROOTFS_SIZE" -gt 300 ] && EXPAND_ROOT=1 || EXPAND_ROOT=0; \
 		echo "EXPAND_ROOT=$$EXPAND_ROOT" >> "$$FEATURE_FILE"; \
-	fi ;\
+	fi ;
 	@sh "$(TOPDIR)/fanchmwrt/scripts/apply-feeds-overlays.sh" \
 		--source "$(TOPDIR)/fanchmwrt/overlays/feeds" \
 		--destination "$(TOPDIR)/feeds"
