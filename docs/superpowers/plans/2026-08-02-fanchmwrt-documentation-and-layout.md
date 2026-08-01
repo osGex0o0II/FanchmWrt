@@ -120,7 +120,7 @@ Do not alter package names (`fwx`, `fwxd`, `libfwx_common`, `luci-theme-fanchmwr
 
 - [ ] **Step 4: Prove no stale paths remain**
 
-Run: `git grep -nE 'feeds_patches|package/fcm'`.
+Run: `git grep -nE 'feeds_patches|package/fcm' -- ':!docs/superpowers/**'`.
 
 Expected: no output.
 
@@ -227,4 +227,3 @@ make -j"$(nproc)" V=s
 - [ ] **Step 3: Commit coherent change sets**
 
 Create separate commits for: feed overlay/path governance, Chinese documentation/Hero, and GitHub governance. Use `git status --short` after each commit.
-

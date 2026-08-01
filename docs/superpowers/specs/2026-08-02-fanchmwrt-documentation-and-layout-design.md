@@ -72,7 +72,6 @@ SECURITY.md
 
 1. 所有 Markdown 内部链接和 README Logo 路径存在。
 2. overlay 测试证明嵌套文件会复制、既有无关目标文件不会删除、缺少参数会失败。
-3. 仓库中不再存在 `feeds_patches/` 或 `package/fcm/` 的有效路径引用。
+3. 运行时源码、构建文件和用户文档中不再存在 `feeds_patches/` 或 `package/fcm/` 的有效路径引用；设计与历史记录可保留迁移说明。
 4. `feeds.conf.default` 中所有 Git feed 都固定提交。
 5. Git 工作区无未预期文件；Windows 环境限制被记录为 Linux 构建验收项。
-
