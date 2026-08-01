@@ -120,7 +120,7 @@ Do not alter package names (`fwx`, `fwxd`, `libfwx_common`, `luci-theme-fanchmwr
 
 - [ ] **Step 4: Prove no stale paths remain**
 
-Run: `git grep -nE 'feeds_patches|package/fcm' -- ':!docs/superpowers/**'`.
+Run: `git grep -nE 'feeds_patches|package/fcm' -- ':!docs/superpowers/**' ':!.superpowers/**'`.
 
 Expected: no output.
 

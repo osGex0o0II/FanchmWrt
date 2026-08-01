@@ -75,3 +75,21 @@ which confirms no stale source path remains.
 The stale-path verification discrepancy above remains: its exact command
 includes tracked historical task reports despite excluding a different
 directory.
+
+## Follow-up verification correction
+
+The plan's stale-path check now excludes both generated planning documentation
+and the tracked task reports that record historical paths. The Task 1 report
+is unchanged.
+
+```text
+git grep -nE 'feeds_patches|package/fcm' -- ':!docs/superpowers/**' ':!.superpowers/**'
+```
+
+Result: no output, with Git exit code 1 (the expected no-match result).
+
+```text
+git diff --check
+```
+
+Result: exit code 0 with no output.
