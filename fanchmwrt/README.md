@@ -19,3 +19,19 @@ git -c http.proxy= -c https.proxy= ls-remote \
 使用返回的 40 位提交 ID，只替换 `feeds.conf.default` 中
 `src-git fanchmwrt` 行内 `^` 之后的版本号。提交该更新前，请审阅差异并运行
 覆盖脚本的聚焦测试。
+
+## Linux 构建验收
+
+完整固件验收应在 Ubuntu 22.04 等 Linux 环境执行。以下命令覆盖 feeds、配置、
+FanchmWrt 自有软件包和完整构建：
+
+```sh
+./scripts/feeds update -a
+./scripts/feeds install -a
+make defconfig
+make package/fwx/compile V=s
+make package/fwxd/compile V=s
+make -j"$(nproc)" V=s
+```
+
+Windows 工作区中的 Shell 与静态检查不能替代上述验收。
