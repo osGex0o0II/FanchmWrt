@@ -12,7 +12,7 @@ expect_stanza_default() {
 expect_line include/version.mk 'VERSION_NUMBER:=$(if $(VERSION_NUMBER),$(VERSION_NUMBER),25.12.5)'
 expect_stanza_default package/base-files/image-config.in VERSION_DIST FanchmWrt
 expect_stanza_default package/base-files/image-config.in VERSION_REPO https://downloads.openwrt.org/releases/25.12.5
-expected_feeds=${TMPDIR:-/tmp}/fanchmwrt-feeds.$$
+expected_feeds=$(mktemp "${TMPDIR:-/tmp}/fanchmwrt-feeds.XXXXXX")
 trap 'rm -f "$expected_feeds"' 0 HUP INT TERM
 cat >"$expected_feeds" <<'EOF'
 src-git packages https://git.openwrt.org/feed/packages.git^5caa62e0bc9f7fb9b0c12a23267bceb7724214dd
