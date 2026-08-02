@@ -94,15 +94,11 @@ tmp/.prereq_packages: .config
 	touch $@
 endif
 fwx_init:
-	@FEATURE_FILE="$(TOPDIR)/package/base-files/files/etc/product_feature"; \
-	BOARD="$(CONFIG_TARGET_BOARD)"; ARCH="$(CONFIG_ARCH)"; \
-	if [ "$$BOARD" = "x86" ] || [ "$$ARCH" = "x86_64" ] || [ "$$ARCH" = "i386" ] || [ "$${BOARD#rockchip}" != "$$BOARD" ]; then \
-		[ -f "$$FEATURE_FILE" ] && sed -i '/^EXPAND_ROOT=/d' "$$FEATURE_FILE"; \
-		ROOTFS_SIZE="$(CONFIG_TARGET_ROOTFS_PARTSIZE)"; \
-		case "$$ROOTFS_SIZE" in ''|*[!0-9]*) ROOTFS_SIZE=0 ;; esac; \
-		[ "$$ROOTFS_SIZE" -gt 300 ] && EXPAND_ROOT=1 || EXPAND_ROOT=0; \
-		echo "EXPAND_ROOT=$$EXPAND_ROOT" >> "$$FEATURE_FILE"; \
-	fi ;
+	@sh "$(TOPDIR)/fanchmwrt/scripts/update-product-feature.sh" \
+		--feature-file "$(TOPDIR)/package/base-files/files/etc/product_feature" \
+		--board "$(CONFIG_TARGET_BOARD)" \
+		--arch "$(CONFIG_ARCH)" \
+		--rootfs-size "$(CONFIG_TARGET_ROOTFS_PARTSIZE)"
 	@sh "$(TOPDIR)/fanchmwrt/scripts/apply-feeds-overlays.sh" \
 		--source "$(TOPDIR)/fanchmwrt/overlays/feeds" \
 		--destination "$(TOPDIR)/feeds"
