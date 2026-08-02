@@ -5,7 +5,7 @@
 ## 常见检查顺序
 
 1. 确认使用 Linux 构建环境，并记录发行版与依赖安装情况。
-2. 重新执行 `./scripts/feeds update -a` 和 `./scripts/feeds install -a`，确认外部 feed 固定版本未被意外修改。
+2. 按[快速开始](quick-start.md)中的显式直连命令重新执行 feeds 更新和安装，确认外部 feed 固定版本未被意外修改。
 3. 用 `make package/fanchmwrt/fwx/compile V=s` 或 `make package/fanchmwrt/fwxd/compile V=s` 缩小到自有软件包，再判断问题是否属于上游构建系统。
 4. 对于 LuCI 软件源、WireGuard 或端口策略问题，附上可脱敏的配置、日志和复现步骤；不要把报告者的推测当作根因。
 

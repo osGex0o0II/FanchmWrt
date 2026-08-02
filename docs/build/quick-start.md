@@ -5,7 +5,9 @@
 ## 标准步骤
 
 ```sh
-./scripts/feeds update -a
+env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
+  GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=http.proxy GIT_CONFIG_VALUE_0= \
+  GIT_CONFIG_KEY_1=https.proxy GIT_CONFIG_VALUE_1= ./scripts/feeds update -a
 ./scripts/feeds install -a
 make menuconfig
 make defconfig
