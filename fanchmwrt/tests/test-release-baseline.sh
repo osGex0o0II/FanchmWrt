@@ -12,6 +12,18 @@ expect_stanza_default() {
 expect_line include/version.mk 'VERSION_NUMBER:=$(if $(VERSION_NUMBER),$(VERSION_NUMBER),25.12.5)'
 expect_stanza_default package/base-files/image-config.in VERSION_DIST FanchmWrt
 expect_stanza_default package/base-files/image-config.in VERSION_REPO https://downloads.openwrt.org/releases/25.12.5
+resolved_dist=$(
+	make -s --no-print-directory TOPDIR="$root" DUMP=1 CONFIG_VERSION_DIST= print -f - <<'EOF'
+include $(TOPDIR)/rules.mk
+include $(TOPDIR)/include/version.mk
+
+.PHONY: print
+print:
+	@printf '%s\n' "$(VERSION_DIST)"
+EOF
+)
+[ "$resolved_dist" = FanchmWrt ]
+grep -Fq 'root/password' "$root/README.md"
 expected_feeds=$(mktemp "${TMPDIR:-/tmp}/fanchmwrt-feeds.XXXXXX")
 trap 'rm -f "$expected_feeds"' 0 HUP INT TERM
 cat >"$expected_feeds" <<'EOF'
