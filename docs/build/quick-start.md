@@ -11,12 +11,13 @@ env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
 ./scripts/feeds install -a
 make menuconfig
 make defconfig
+make target/linux/compile V=s
 make package/fanchmwrt/fwx/compile V=s
 make package/fanchmwrt/fwxd/compile V=s
 make -j"$(nproc)" V=s
 ```
 
-`make menuconfig` 用于选择目标、设备 Profile 和软件包；`make defconfig` 会根据当前选择补全默认配置。前两条软件包编译命令用于较早发现 FanchmWrt 自有组件的问题，最后一条才执行完整构建。
+`make menuconfig` 用于选择目标、设备 Profile 和软件包；`make defconfig` 会根据当前选择补全默认配置。`make target/linux/compile V=s` 先生成选定目标内核的配置和构建产物，这是 `fwx` 内核模块的依赖。随后两条软件包编译命令用于较早发现 FanchmWrt 自有组件的问题，最后一条才执行完整构建。
 
 ## 验收范围
 

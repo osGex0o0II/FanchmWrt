@@ -31,9 +31,13 @@ env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
   GIT_CONFIG_KEY_1=https.proxy GIT_CONFIG_VALUE_1= ./scripts/feeds update -a
 ./scripts/feeds install -a
 make defconfig
+make target/linux/compile V=s
 make package/fanchmwrt/fwx/compile V=s
 make package/fanchmwrt/fwxd/compile V=s
 make -j"$(nproc)" V=s
 ```
+
+`make target/linux/compile V=s` 先生成选定目标内核的配置和构建产物，这是
+`fwx` 内核模块能够通过软件包依赖检查的必要前置步骤。
 
 Windows 工作区中的 Shell 与静态检查不能替代上述验收。
