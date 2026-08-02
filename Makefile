@@ -151,6 +151,6 @@ ifneq ($(CONFIG_CCACHE),)
 	$(STAGING_DIR_HOST)/bin/ccache -s
 endif
 
-.PHONY: clean dirclean prereq prepare world package/symlinks package/symlinks-install package/symlinks-clean
+.PHONY: clean dirclean fwx_init prereq prepare world package/symlinks package/symlinks-install package/symlinks-clean
 
 endif
