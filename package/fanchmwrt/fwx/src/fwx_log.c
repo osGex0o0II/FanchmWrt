@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -175,7 +175,7 @@ static struct ctl_table fwx_table[] = {
 		.mode		= 0666,
 		.proc_handler	= proc_dointvec,
 	},
-		
+
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
 	{
 	}

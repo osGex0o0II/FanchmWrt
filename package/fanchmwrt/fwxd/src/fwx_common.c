@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <unistd.h>
 #include <stdlib.h>
@@ -45,14 +45,14 @@ int fwx_check_time_manual(fwx_time_config_t *t_config, fwx_run_time_status_t *st
         if (t_config->time_list[i].weekday_map[current_wday] == 0) {
             continue; // Skip if weekday is not enabled
         }
-        
+
         int start_minutes = t_config->time_list[i].start_time.hour * 60 + t_config->time_list[i].start_time.min;
         int end_minutes = t_config->time_list[i].end_time.hour * 60 + t_config->time_list[i].end_time.min;
-        LOG_DEBUG("check time: %02d:%02d-%02d:%02d, weekday_map[%d]=%d\n", 
+        LOG_DEBUG("check time: %02d:%02d-%02d:%02d, weekday_map[%d]=%d\n",
                t_config->time_list[i].start_time.hour, t_config->time_list[i].start_time.min,
                t_config->time_list[i].end_time.hour, t_config->time_list[i].end_time.min,
                current_wday, t_config->time_list[i].weekday_map[current_wday]);
-        
+
         if (current_minutes >= start_minutes && current_minutes <= end_minutes) {
             LOG_DEBUG("current time in time list\n");
             status->match_time = 1;
@@ -70,13 +70,13 @@ int fwx_check_time_dynamic(fwx_time_config_t *t_config, fwx_run_time_status_t *s
 
     int start_minutes = t_config->seg_time.start_time.hour * 60 + t_config->seg_time.start_time.min;
     int end_minutes = t_config->seg_time.end_time.hour * 60 + t_config->seg_time.end_time.min;
-    printf("check seg_time: %02d:%02d-%02d:%02d\n", 
+    printf("check seg_time: %02d:%02d-%02d:%02d\n",
            t_config->seg_time.start_time.hour, t_config->seg_time.start_time.min,
            t_config->seg_time.end_time.hour, t_config->seg_time.end_time.min);
     if (!(current_minutes >= start_minutes && current_minutes <= end_minutes)) {
         printf("current time not in seg_time\n");
         fwx_init_time_status(status);
-        return 0; 
+        return 0;
     }
 
     status->match_time = 1;

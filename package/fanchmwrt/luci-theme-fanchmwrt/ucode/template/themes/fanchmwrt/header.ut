@@ -59,7 +59,7 @@
 			<nav class="sidebar-nav">
 				<ul class="nav" id="topmenu" style="display:none"></ul>
 			</nav>
-			
+
 			<div id="maincontent" class="container">
 			{% if (getuid() == 0 && getspnam('root')?.pwdp === ''): %}
 				<div class="alert-message warning">

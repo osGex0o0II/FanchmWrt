@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #ifndef __UTILS_H__
 #define __UTILS_H__
@@ -10,10 +10,10 @@
 
 
 typedef struct fwx_time_period {
-    char start_time[16];      
-    char end_time[16];         
-    int weekdays[MAX_WEEKDAYS]; 
-    int weekday_count;         
+    char start_time[16];
+    char end_time[16];
+    int weekdays[MAX_WEEKDAYS];
+    int weekday_count;
 } fwx_time_period_t;
 
 char *str_trim(char *s);

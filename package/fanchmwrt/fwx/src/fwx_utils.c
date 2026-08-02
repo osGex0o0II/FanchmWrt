@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <linux/init.h>
 #include <linux/module.h>
@@ -28,30 +28,30 @@ u_int32_t af_get_timestamp_sec(void)
 }
 
 
-int mac_str_to_bin(const char *mac_str, u8 *mac_bin) {  
-    if (!mac_str || !mac_bin)  
-        return 0;  
+int mac_str_to_bin(const char *mac_str, u8 *mac_bin) {
+    if (!mac_str || !mac_bin)
+        return 0;
 
-    const char *p = mac_str;  
-    int i = 0;  
-  
-    while (*p && i < 6) {  
-        unsigned int byte;  
+    const char *p = mac_str;
+    int i = 0;
+
+    while (*p && i < 6) {
+        unsigned int byte;
         char hex[3] = {0};
 
-        if (sscanf(p, "%2hhx", &byte) != 1)  
-            return false;  
-  
-        mac_bin[i++] = (u8)byte;  
-        while (*p && *p != ':')  
-            p++;  
-  
-        if (*p == ':')  
-            p++; 
-    }  
+        if (sscanf(p, "%2hhx", &byte) != 1)
+            return false;
 
-    return i == 6;  
-}  
+        mac_bin[i++] = (u8)byte;
+        while (*p && *p != ':')
+            p++;
+
+        if (*p == ':')
+            p++;
+    }
+
+    return i == 6;
+}
 
 int k_atoi(const char *str) {
     int result = 0;
@@ -127,21 +127,21 @@ void print_hex_ascii(const unsigned char *data, size_t size) {
             if (i + j < size) {
                 printk(KERN_CONT"%02x ", data[i + j]);
             } else {
-                printk(KERN_CONT"   "); 
-            }   
-        }   
+                printk(KERN_CONT"   ");
+            }
+        }
 
         printk(KERN_CONT" ");
 
         for (j = 0; j < 16; ++j) {
             if (i + j < size) {
-                unsigned char c = data[i + j]; 
-                printk(KERN_CONT"%c", isprint_char(c) ? c : '.'); 
-            }   
-        }   
+                unsigned char c = data[i + j];
+                printk(KERN_CONT"%c", isprint_char(c) ? c : '.');
+            }
+        }
 
         printk(KERN_CONT"\n");
-    }   
+    }
     printk(KERN_CONT"---------------------------------------\n");
 }
 
@@ -166,7 +166,7 @@ typedef signed int acpi_native_int;
 #ifndef _VALIST
 #define _VALIST
 typedef char *va_list;
-#endif	
+#endif
 
 #define  _AUPBND                (sizeof (acpi_native_int) - 1)
 #define  _ADNBND                (sizeof (acpi_native_int) - 1)
@@ -177,7 +177,7 @@ typedef char *va_list;
 #define va_end(ap)              (void) 0
 #define va_start(ap, A)         (void) ((ap) = (((char *) &(A)) + (_bnd (A,_AUPBND))))
 
-#endif			
+#endif
 
 #ifndef TOLOWER
 #define TOLOWER(x) ((x) | 0x20)
@@ -322,7 +322,7 @@ static int k_vsscanf(const char *buf, const char *fmt, va_list args)
 			break;
 
 		switch (qualifier) {
-		case 'H':	
+		case 'H':
 			if (is_sign) {
 				signed char *s = (signed char *)va_arg(args, signed char *);
 				*s = (signed char)simple_strtol(str, &next, base);
@@ -397,5 +397,3 @@ int k_sscanf(const char *buf, const char *fmt, ...)
 	va_end(args);
 	return i;
 }
-
-

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <unistd.h>
 #include <stdlib.h>
@@ -44,22 +44,22 @@ extern void reload_oaf_rule(void);
 
 
 #define MAX_INTERFACE_TRAFFIC_POINTS 60
-#define INTERFACE_TRAFFIC_INTERVAL 2  
+#define INTERFACE_TRAFFIC_INTERVAL 2
 #define FWX_USER_SESSION_PROC_PATH "/proc/net/fwx_user"
 
 typedef struct interface_traffic_node {
     struct list_head list;
-    unsigned long long up_bytes;      
-    unsigned long long down_bytes;    
-    unsigned int up_rate;             
-    unsigned int down_rate;           
-    u_int32_t timestamp;              
+    unsigned long long up_bytes;
+    unsigned long long down_bytes;
+    unsigned int up_rate;
+    unsigned int down_rate;
+    u_int32_t timestamp;
 } interface_traffic_node_t;
 
 
 static LIST_HEAD(interface_traffic_list);
 static int interface_traffic_count = 0;
-static char g_interface_name[16] = {0};  
+static char g_interface_name[16] = {0};
 static unsigned long long last_up_bytes = 0;
 static unsigned long long last_down_bytes = 0;
 static u_int32_t last_traffic_time = 0;
@@ -304,7 +304,7 @@ appfilter_handle_dev_visit_list(struct ubus_context *ctx, struct ubus_object *ob
     int total_page = (total_num + page_size - 1) / page_size;
     if (total_page < 1) total_page = 1;
     if (page > total_page) page = total_page;
-    
+
 
     struct json_object *paged_array = json_object_new_array();
     int start_idx = (page - 1) * page_size;
@@ -326,14 +326,14 @@ appfilter_handle_dev_visit_list(struct ubus_context *ctx, struct ubus_object *ob
 
     json_object_put(online_array);
     json_object_put(offline_array);
-    
+
 
     json_object_object_add(root_obj, "total_num", json_object_new_int(total_num));
     json_object_object_add(root_obj, "total_page", json_object_new_int(total_page));
     json_object_object_add(root_obj, "page", json_object_new_int(page));
     json_object_object_add(root_obj, "page_size", json_object_new_int(page_size));
     json_object_object_add(root_obj, "list", paged_array);
-    
+
     json_object_put(req_obj);
     blob_buf_init(&b, 0);
     blobmsg_add_object(&b, root_obj);
@@ -369,17 +369,17 @@ void update_app_visit_time_list(char *mac, struct app_visit_stat_info *visit_inf
         printf("not found mac:%s\n", mac);
         return;
     }
-    
-    
-    app_stat_sort_t app_stats[MAX_APP_STAT_NUM * 2];  
+
+
+    app_stat_sort_t app_stats[MAX_APP_STAT_NUM * 2];
     int app_count = 0;
-    
+
     visit_stat_t *stat_node = NULL;
     list_for_each_entry(stat_node, &node->stat_list, list) {
         if (stat_node->total_time == 0)
             continue;
-        
-        
+
+
         int found = 0;
         for (i = 0; i < app_count; i++) {
             if (app_stats[i].app_id == stat_node->appid) {
@@ -388,8 +388,8 @@ void update_app_visit_time_list(char *mac, struct app_visit_stat_info *visit_inf
                 break;
             }
         }
-        
-        
+
+
         if (!found) {
             if (app_count < MAX_APP_STAT_NUM * 2) {
                 app_stats[app_count].app_id = stat_node->appid;
@@ -398,11 +398,11 @@ void update_app_visit_time_list(char *mac, struct app_visit_stat_info *visit_inf
             }
         }
     }
-    
-    
+
+
     if (app_count > 0) {
         qsort(app_stats, app_count, sizeof(app_stat_sort_t), compare_app_stat_sort);
-        
+
         int top_count = (app_count < MAX_APP_STAT_NUM) ? app_count : MAX_APP_STAT_NUM;
         for (i = 0; i < top_count; i++) {
             visit_info->visit_list[i].app_id = app_stats[i].app_id;
@@ -422,13 +422,13 @@ void update_app_class_visit_time_list(char *mac, int *visit_time)
         printf("not found mac:%s\n", mac);
         return;
     }
-    
-    
+
+
     visit_stat_t *stat_node = NULL;
     list_for_each_entry(stat_node, &node->stat_list, list) {
         if (stat_node->total_time == 0)
             continue;
-        
+
         int type = stat_node->appid / 1000;
         if (type > 0 && type <= MAX_APP_TYPE) {
             visit_time[type - 1] += stat_node->total_time;
@@ -496,13 +496,13 @@ void update_top5_app(client_node_t *node, app_visit_time_info_t top5_app_list[])
     memset(app_visit_array, 0x0, sizeof(app_visit_array));
     int app_visit_num = 0;
 
-    
+
     visit_stat_t *stat_node = NULL;
     list_for_each_entry(stat_node, &node->stat_list, list) {
         if (stat_node->total_time == 0)
             continue;
-        
-        
+
+
         int found = 0;
         for (i = 0; i < app_visit_num; i++) {
             if (app_visit_array[i].app_id == stat_node->appid) {
@@ -511,8 +511,8 @@ void update_top5_app(client_node_t *node, app_visit_time_info_t top5_app_list[])
                 break;
             }
         }
-        
-        
+
+
         if (!found && app_visit_num < MAX_STAT_APP_NUM) {
             app_visit_array[app_visit_num].app_id = stat_node->appid;
             app_visit_array[app_visit_num].total_time = stat_node->total_time;
@@ -730,7 +730,7 @@ static int parse_feature_cfg(struct json_object *class_list) {
                 char combined[256];
                 char icon_path[512];
                 snprintf(icon_path, sizeof(icon_path), "/www/luci-static/resources/app_icons/%s.png", appid_str);
-                int with_icon = access(icon_path, F_OK) == 0 ? 1 : 0; 
+                int with_icon = access(icon_path, F_OK) == 0 ? 1 : 0;
                 snprintf(combined, sizeof(combined), "%s,%s,%d", appid_str, name, with_icon);
                 json_object_array_add(app_list, json_object_new_string(combined));
             }
@@ -1906,7 +1906,7 @@ void all_users_callback(void *arg, client_node_t *client)
         LOG_ERROR("all_users_callback: arg or client is NULL\n");
         return;
     }
-    
+
     flag = au_info->flag;
     struct json_object *users_array = au_info->users_array;
     if (!users_array) {
@@ -1917,12 +1917,12 @@ void all_users_callback(void *arg, client_node_t *client)
     int current_count = json_object_array_length(users_array);
     if (current_count >= MAX_SUPPORT_DEV_NUM)
     {
-        LOG_ERROR("all_users_callback: users_array length (%d) >= MAX_SUPPORT_DEV_NUM (%d), skipping\n", 
+        LOG_ERROR("all_users_callback: users_array length (%d) >= MAX_SUPPORT_DEV_NUM (%d), skipping\n",
                current_count, MAX_SUPPORT_DEV_NUM);
         return;
     }
 
-    LOG_DEBUG("all_users_callback: Processing client - mac=%s, online=%d, flag=%d, current_count=%d\n", 
+    LOG_DEBUG("all_users_callback: Processing client - mac=%s, online=%d, flag=%d, current_count=%d\n",
            client->mac, client->online, flag, current_count);
 
     struct json_object *user_obj = json_object_new_object();
@@ -1934,7 +1934,7 @@ void all_users_callback(void *arg, client_node_t *client)
     int mf_whitelist = is_macfilter_whitelist_mac(client->mac);
     const char *pc_status = apply_whitelist_pc_status(get_pc_status_for_mac(au_info, client->mac), af_whitelist, mf_whitelist);
     const char *pc_status_key = apply_whitelist_pc_status(get_pc_status_key_for_mac(au_info, client->mac), af_whitelist, mf_whitelist);
-    
+
     json_object_object_add(user_obj, "mac", json_object_new_string(client->mac));
     json_object_object_add(user_obj, "pc_status", json_object_new_string(pc_status));
     json_object_object_add(user_obj, "pc_status_key", json_object_new_string(pc_status_key));
@@ -1958,7 +1958,7 @@ void all_users_callback(void *arg, client_node_t *client)
     if (flag > 1){
         json_object_object_add(user_obj, "hostname", json_object_new_string(client->hostname));
         json_object_object_add(user_obj, "nickname", json_object_new_string(client->nickname));
-        LOG_DEBUG("all_users_callback: Added hostname=%s, nickname=%s for mac=%s\n", 
+        LOG_DEBUG("all_users_callback: Added hostname=%s, nickname=%s for mac=%s\n",
                client->hostname, client->nickname, client->mac);
     }
 
@@ -1992,13 +1992,13 @@ void all_users_callback(void *arg, client_node_t *client)
             const char *app_name = get_app_name_by_id(client->visiting_app);
             json_object_object_add(user_obj, "app_id", json_object_new_int(client->visiting_app));
             json_object_object_add(user_obj, "app", json_object_new_string(app_name));
-            LOG_DEBUG("all_users_callback: Added visiting app=%s (id=%d), url=%s for mac=%s\n", 
+            LOG_DEBUG("all_users_callback: Added visiting app=%s (id=%d), url=%s for mac=%s\n",
                    app_name, client->visiting_app, client->visiting_url, client->mac);
         } else {
             json_object_object_add(user_obj, "app_id", json_object_new_int(0));
             json_object_object_add(user_obj, "app", json_object_new_string(""));
         }
-        
+
 
         json_object_object_add(user_obj, "up_rate", json_object_new_int(client->up_rate));
         json_object_object_add(user_obj, "down_rate", json_object_new_int(client->down_rate));
@@ -2007,14 +2007,14 @@ void all_users_callback(void *arg, client_node_t *client)
         json_object_object_add(user_obj, "tx_rate", json_object_new_int(client->tx_rate));
         json_object_object_add(user_obj, "band", json_object_new_string(client->band));
         json_object_object_add(user_obj, "wifi_ifname", json_object_new_string(client->wifi_ifname));
-        
+
 
         daily_hourly_stat_t *today_stat = get_today_stat(client);
         unsigned long long today_up_bytes = 0;
         unsigned long long today_down_bytes = 0;
         unsigned long long today_active_time = 0;
         int today_active_minutes = 0;
-        
+
         if (today_stat) {
             for (hour = 0; hour < HOURS_PER_DAY; hour++) {
                 today_up_bytes += today_stat->hourly_traffic[hour].up_bytes;
@@ -2023,17 +2023,17 @@ void all_users_callback(void *arg, client_node_t *client)
             }
         }
         today_active_minutes = (int)(today_active_time / 60);
-        
+
 
         json_object_object_add(user_obj, "today_up_bytes", json_object_new_int64(today_up_bytes));
         json_object_object_add(user_obj, "today_down_bytes", json_object_new_int64(today_down_bytes));
         json_object_object_add(user_obj, "today_active_time", json_object_new_int64(today_active_time));
         json_object_object_add(user_obj, "today_active_minutes", json_object_new_int(today_active_minutes));
     }
-    
+
     json_object_array_add(users_array, user_obj);
     int new_count = json_object_array_length(users_array);
-    LOG_DEBUG("all_users_callback: Successfully added user mac=%s, array length now: %d\n", 
+    LOG_DEBUG("all_users_callback: Successfully added user mac=%s, array length now: %d\n",
            client->mac, new_count);
 }
 
@@ -2128,7 +2128,7 @@ static int handle_get_all_users(struct ubus_context *ctx, struct ubus_object *ob
 
     extern struct list_head client_list;
     extern int g_cur_user_num;
-    
+
     all_users_info_t au_info;
     memset(&au_info, 0, sizeof(au_info));
     au_info.flag = flag;
@@ -2143,11 +2143,11 @@ static int handle_get_all_users(struct ubus_context *ctx, struct ubus_object *ob
 
     update_client_nickname();
     update_client_visiting_info();
-    
+
     client_foreach(&au_info, all_users_callback);
 
     int user_count = json_object_array_length(au_info.users_array);
-    
+
     json_object_array_sort(au_info.users_array, compare_users);
 
 
@@ -2189,7 +2189,7 @@ static int handle_get_all_users(struct ubus_context *ctx, struct ubus_object *ob
     json_object_object_add(response, "data", data_obj);
 
     uci_free_context(uci_ctx);
-    
+
     struct blob_buf b = {};
     blob_buf_init(&b, 0);
     blobmsg_add_object(&b, response);
@@ -2206,32 +2206,32 @@ struct json_object *fwx_api_set_nickname(struct json_object *req_obj) {
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
     struct json_object *nickname_obj = json_object_object_get(req_obj, "nickname");
-    
+
     if (!nickname_obj || !mac_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *mac = json_object_get_string(mac_obj);
     const char *nickname = json_object_get_string(nickname_obj);
-    
+
     if (!mac) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct uci_context *uci_ctx = uci_alloc_context();
     if (!uci_ctx) {
         LOG_ERROR("Failed to allocate UCI context\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     int num = fwx_uci_get_list_num(uci_ctx, "user_info", "user_info");
     char mac_str[128] = {0};
     int index = -1;
     int i;
-    
+
     for (i = 0; i < num; i++) {
         fwx_uci_get_array_value(uci_ctx, "user_info.@user_info[%d].mac", i, mac_str, sizeof(mac_str));
         if (strcmp(mac_str, mac) == 0) {
@@ -2244,7 +2244,7 @@ struct json_object *fwx_api_set_nickname(struct json_object *req_obj) {
     if (nickname && strlen(nickname) > 0) {
         if (index == -1) {
             fwx_uci_add_section(uci_ctx, "user_info", "user_info");
-            index = num;  
+            index = num;
         }
         fwx_uci_set_array_value(uci_ctx, "user_info.@user_info[%d].mac", index, (char *)mac);
         fwx_uci_set_array_value(uci_ctx, "user_info.@user_info[%d].nickname", index, (char *)nickname);
@@ -2425,17 +2425,17 @@ struct json_object *fwx_api_dev_visit_list(struct json_object *req_obj) {
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
     if (!mac_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *mac = json_object_get_string(mac_obj);
     if (!mac) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     int page = 1;
     int page_size = 15;
     struct json_object *page_obj = json_object_object_get(req_obj, "page");
@@ -2448,10 +2448,10 @@ struct json_object *fwx_api_dev_visit_list(struct json_object *req_obj) {
         page_size = json_object_get_int(page_size_obj);
         if (page_size < 1) page_size = 15;
     }
-    
+
     struct json_object *root_obj = json_object_new_object();
     struct json_object *visit_array = json_object_new_array();
-    
+
     client_node_t *node = find_client_node(mac);
     if (!node) {
         json_object_object_add(root_obj, "hostname", json_object_new_string(""));
@@ -2465,11 +2465,11 @@ struct json_object *fwx_api_dev_visit_list(struct json_object *req_obj) {
         json_object_object_add(root_obj, "list", visit_array);
         return fwx_gen_api_response_data(API_CODE_SUCCESS, root_obj);
     }
-    
+
     json_object_object_add(root_obj, "hostname", json_object_new_string(node->hostname));
     json_object_object_add(root_obj, "mac", json_object_new_string(node->mac));
     json_object_object_add(root_obj, "ip", json_object_new_string(node->ip));
-    
+
 
     struct json_object *online_array = json_object_new_array();
     struct json_object *offline_array = json_object_new_array();
@@ -2513,13 +2513,13 @@ struct json_object *fwx_api_dev_visit_list(struct json_object *req_obj) {
     int total_page = (total_num + page_size - 1) / page_size;
     if (total_page < 1) total_page = 1;
     if (page > total_page) page = total_page;
-    
+
 
     struct json_object *paged_array = json_object_new_array();
     int start_idx = (page - 1) * page_size;
     int end_idx = start_idx + page_size;
     if (end_idx > total_num) end_idx = total_num;
-    
+
     int i;
     for (i = start_idx; i < end_idx; i++) {
         struct json_object *item = NULL;
@@ -2533,16 +2533,16 @@ struct json_object *fwx_api_dev_visit_list(struct json_object *req_obj) {
             json_object_array_add(paged_array, item);
         }
     }
-    
+
     json_object_put(online_array);
     json_object_put(offline_array);
-    
+
     json_object_object_add(root_obj, "total_num", json_object_new_int(total_num));
     json_object_object_add(root_obj, "total_page", json_object_new_int(total_page));
     json_object_object_add(root_obj, "page", json_object_new_int(page));
     json_object_object_add(root_obj, "page_size", json_object_new_int(page_size));
     json_object_object_add(root_obj, "list", paged_array);
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, root_obj);
 }
 
@@ -2867,26 +2867,26 @@ struct json_object *fwx_api_dev_visit_time(struct json_object *req_obj) {
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
     if (!mac_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *mac = json_object_get_string(mac_obj);
     if (!mac) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct app_visit_stat_info info;
     memset((char *)&info, 0x0, sizeof(info));
     update_app_visit_time_list((char *)mac, &info);
-    
+
     struct json_object *resp_obj = json_object_new_object();
     struct json_object *app_info_array = json_object_new_array();
     json_object_object_add(resp_obj, "list", app_info_array);
     json_object_object_add(resp_obj, "total_num", json_object_new_int(info.num));
-    
+
     int i;
     for (i = 0; i < info.num; i++) {
         struct json_object *app_info_obj = json_object_new_object();
@@ -2895,7 +2895,7 @@ struct json_object *fwx_api_dev_visit_time(struct json_object *req_obj) {
         json_object_object_add(app_info_obj, "t", json_object_new_int(info.visit_list[i].total_time));
         json_object_array_add(app_info_array, app_info_obj);
     }
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, resp_obj);
 }
 
@@ -2904,25 +2904,25 @@ struct json_object *fwx_api_app_class_visit_time(struct json_object *req_obj) {
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
     if (!mac_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *mac = json_object_get_string(mac_obj);
     if (!mac) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     int app_class_visit_time[MAX_APP_TYPE];
     memset(app_class_visit_time, 0x0, sizeof(app_class_visit_time));
     update_app_class_visit_time_list((char *)mac, app_class_visit_time);
-    
+
     struct json_object *resp_obj = json_object_new_object();
     struct json_object *app_class_array = json_object_new_array();
     json_object_object_add(resp_obj, "class_list", app_class_array);
-    
+
     extern int g_cur_class_num;
     int i;
     for (i = 0; i < MAX_APP_TYPE; i++) {
@@ -2934,7 +2934,7 @@ struct json_object *fwx_api_app_class_visit_time(struct json_object *req_obj) {
         json_object_object_add(app_class_obj, "visit_time", json_object_new_int(app_class_visit_time[i]));
         json_object_array_add(app_class_array, app_class_obj);
     }
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, resp_obj);
 }
 
@@ -2943,10 +2943,10 @@ struct json_object *fwx_api_dev_list(struct json_object *req_obj) {
     int i, j;
     struct json_object *root_obj = json_object_new_object();
     struct json_object *dev_array = json_object_new_array();
-    
+
     extern struct list_head client_list;
     extern int g_cur_user_num;
-    
+
     client_node_t *node = NULL;
     list_for_each_entry(node, &client_list, client) {
         struct json_object *dev_obj = json_object_new_object();
@@ -2956,10 +2956,10 @@ struct json_object *fwx_api_dev_list(struct json_object *req_obj) {
         json_object_object_add(dev_obj, "hostname", json_object_new_string(node->hostname));
         json_object_object_add(dev_obj, "nickname", json_object_new_string(node->nickname));
         json_object_object_add(dev_obj, "online", json_object_new_int(node->online));
-        
+
         app_visit_time_info_t top5_app_list[5] = {0};
         update_top5_app(node, top5_app_list);
-        
+
         struct json_object *visit_info_array = json_object_new_array();
         for (i = 0; i < 5; i++) {
             if (top5_app_list[i].app_id == 0)
@@ -2973,24 +2973,24 @@ struct json_object *fwx_api_dev_list(struct json_object *req_obj) {
         json_object_object_add(dev_obj, "visit_info", visit_info_array);
         json_object_array_add(dev_array, dev_obj);
     }
-    
+
     json_object_object_add(root_obj, "dev_list", dev_array);
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, root_obj);
 }
 
 
 struct json_object *fwx_api_class_list(struct json_object *req_obj) {
     struct json_object *class_list = json_object_new_array();
-    
+
     if (parse_feature_cfg(class_list) != 0) {
         json_object_put(class_list);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct json_object *response = json_object_new_object();
     json_object_object_add(response, "class_list", class_list);
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, response);
 }
 
@@ -2999,16 +2999,16 @@ struct json_object *fwx_api_get_all_users(struct json_object *req_obj) {
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     int flag = 0;
     int page = 0;
     int page_size = 15;
     int use_paging = 0;
-    
+
     struct json_object *flag_obj = json_object_object_get(req_obj, "flag");
     struct json_object *page_obj = json_object_object_get(req_obj, "page");
     struct json_object *page_size_obj = json_object_object_get(req_obj, "page_size");
-    
+
     if (flag_obj) {
         flag = json_object_get_int(flag_obj);
     }
@@ -3024,16 +3024,16 @@ struct json_object *fwx_api_get_all_users(struct json_object *req_obj) {
         page_size = json_object_get_int(page_size_obj);
         if (page_size < 1) page_size = 15;
     }
-    
+
     struct uci_context *uci_ctx = uci_alloc_context();
     if (!uci_ctx) {
         LOG_ERROR("Failed to allocate UCI context\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     extern struct list_head client_list;
     extern int g_cur_user_num;
-    
+
     all_users_info_t au_info;
     memset(&au_info, 0, sizeof(au_info));
     au_info.flag = flag;
@@ -3046,14 +3046,14 @@ struct json_object *fwx_api_get_all_users(struct json_object *req_obj) {
     load_parental_control_status(&au_info);
     load_mac_blacklist(&au_info);
     load_user_session_count(&au_info);
-    
+
     update_client_nickname();
     update_client_visiting_info();
     client_foreach(&au_info, all_users_callback);
-    
+
     int user_count = json_object_array_length(au_info.users_array);
     json_object_array_sort(au_info.users_array, compare_users);
-    
+
 
     int total_num = json_object_array_length(au_info.users_array);
     int total_page = 1;
@@ -3092,9 +3092,9 @@ struct json_object *fwx_api_get_all_users(struct json_object *req_obj) {
     json_object_object_add(data_obj, "total_page", json_object_new_int(total_page));
     json_object_object_add(data_obj, "page", json_object_new_int(resp_page));
     json_object_object_add(data_obj, "page_size", json_object_new_int(resp_page_size));
-    
+
     uci_free_context(uci_ctx);
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
@@ -3394,7 +3394,7 @@ struct json_object *fwx_api_get_oaf_status(struct json_object *req_obj) {
     int enable = 0;
     int ret = 0;
     int engine_status = 0;
-    
+
     ret = exec_with_result_line("cat /proc/sys/oaf/enable", result, sizeof(result));
     if (strlen(result) == 0) {
         engine_status = 0;
@@ -3403,25 +3403,25 @@ struct json_object *fwx_api_get_oaf_status(struct json_object *req_obj) {
         enable = atoi(result);
         engine_status = 1;
     }
-    
+
     json_object_object_add(data_obj, "enable", json_object_new_int(enable));
     json_object_object_add(data_obj, "version", json_object_new_string(OAF_VERSION));
     json_object_object_add(data_obj, "engine_status", json_object_new_int(engine_status));
-    
+
     ret = exec_with_result_line("cat /proc/sys/oaf/version", kernel_version, sizeof(kernel_version));
     if (ret >= 0) {
         json_object_object_add(data_obj, "engine_version", json_object_new_string(kernel_version));
     } else {
         json_object_object_add(data_obj, "engine_version", json_object_new_string(""));
     }
-    
+
     ret = exec_with_result_line("uname -r", kernel_version, sizeof(kernel_version));
     if (ret >= 0) {
         json_object_object_add(data_obj, "kernel_version", json_object_new_string(kernel_version));
     } else {
         json_object_object_add(data_obj, "kernel_version", json_object_new_string(""));
     }
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
@@ -3451,38 +3451,38 @@ struct json_object *fwx_api_get_system_base_info(struct json_object *req_obj) {
 
 struct json_object *fwx_api_visit_list(struct json_object *req_obj) {
     const char *mac = NULL;
-    
+
     if (req_obj) {
         struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
         if (mac_obj) {
             mac = json_object_get_string(mac_obj);
         }
     }
-    
+
     struct json_object *root_obj = json_object_new_object();
     struct json_object *dev_array = json_object_new_array();
-    
+
     extern struct list_head client_list;
     client_node_t *node = NULL;
     visit_info_t *p_info = NULL;
-    
+
     list_for_each_entry(node, &client_list, client) {
         if (mac && strcmp(mac, node->mac)) {
             continue;
         }
-        
+
         struct json_object *dev_obj = json_object_new_object();
         json_object_object_add(dev_obj, "hostname", json_object_new_string(node->hostname ? node->hostname : "unknown"));
         json_object_object_add(dev_obj, "mac", json_object_new_string(node->mac));
         json_object_object_add(dev_obj, "ip", json_object_new_string(node->ip));
         json_object_object_add(dev_obj, "ipv6", json_object_new_string(node->ipv6));
-        
+
         struct json_object *online_array = json_object_new_array();
         struct json_object *offline_array = json_object_new_array();
 
         list_for_each_entry(p_info, &node->online_visit, visit) {
             int total_time = p_info->latest_time - p_info->first_time;
-            
+
             struct json_object *visit_obj = json_object_new_object();
             json_object_object_add(visit_obj, "appname", json_object_new_string(get_app_name_by_id(p_info->appid)));
             json_object_object_add(visit_obj, "appid", json_object_new_int(p_info->appid));
@@ -3498,7 +3498,7 @@ struct json_object *fwx_api_visit_list(struct json_object *req_obj) {
             char *first_time_str = format_time(p_info->first_time);
             char *latest_time_str = format_time(p_info->latest_time);
             int total_time = p_info->latest_time - p_info->first_time;
-            
+
             struct json_object *visit_obj = json_object_new_object();
             json_object_object_add(visit_obj, "appname", json_object_new_string(get_app_name_by_id(p_info->appid)));
             json_object_object_add(visit_obj, "appid", json_object_new_int(p_info->appid));
@@ -3508,7 +3508,7 @@ struct json_object *fwx_api_visit_list(struct json_object *req_obj) {
             json_object_object_add(visit_obj, "latest_time", json_object_new_int(p_info->latest_time));
             json_object_object_add(visit_obj, "total_time", json_object_new_int(total_time));
             json_object_array_add(offline_array, visit_obj);
-            
+
             if (first_time_str)
                 free(first_time_str);
             if (latest_time_str)
@@ -3543,9 +3543,9 @@ struct json_object *fwx_api_visit_list(struct json_object *req_obj) {
         json_object_object_add(dev_obj, "visit_info", visit_array);
         json_object_array_add(dev_array, dev_obj);
     }
-    
+
     json_object_object_add(root_obj, "dev_list", dev_array);
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, root_obj);
 }
 
@@ -3564,12 +3564,12 @@ static int handle_set_nickname(struct ubus_context *ctx, struct ubus_object *obj
     printf("msg_obj_str: %s\n", msg_obj_str);
     struct json_object *req_obj = json_tokener_parse(msg_obj_str);
     struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
-   
+
     struct json_object *nickname_obj = json_object_object_get(req_obj, "nickname");
     if (!nickname_obj || !mac_obj)
         return -1;
-    
-    
+
+
     struct uci_context *uci_ctx = uci_alloc_context();
     if (!uci_ctx) {
         printf("Failed to allocate UCI context\n");
@@ -3601,7 +3601,7 @@ static int handle_set_nickname(struct ubus_context *ctx, struct ubus_object *obj
         printf("delete nickname mac = %s\n", json_object_get_string(mac_obj));
     }
 
-  
+
     fwx_uci_commit(uci_ctx, "user_info");
     reload_oaf_rule();
 
@@ -3629,7 +3629,7 @@ static int handle_get_oaf_status(struct ubus_context *ctx, struct ubus_object *o
     int enable = 0;
     int ret = 0;
     int engine_status = 0;
-    
+
     ret = exec_with_result_line("cat /proc/sys/oaf/enable", result, sizeof(result));
     if (strlen(result) == 0){
         engine_status = 0;
@@ -3639,7 +3639,7 @@ static int handle_get_oaf_status(struct ubus_context *ctx, struct ubus_object *o
         enable = atoi(result);
         engine_status = 1;
     }
- 
+
     json_object_object_add(data_obj, "enable", json_object_new_int(enable));
     json_object_object_add(data_obj, "version", json_object_new_string(OAF_VERSION));
 
@@ -3656,13 +3656,13 @@ static int handle_get_oaf_status(struct ubus_context *ctx, struct ubus_object *o
     ret = exec_with_result_line("uname -r", kernel_version, sizeof(kernel_version));
     if (ret >= 0){
         json_object_object_add(data_obj, "kernel_version", json_object_new_string(kernel_version));
-    }   
+    }
     else{
         json_object_object_add(data_obj, "kernel_version", json_object_new_string(""));
     }
 
     json_object_object_add(response, "data", data_obj);
-    
+
     struct blob_buf b = {};
     blob_buf_init(&b, 0);
     blobmsg_add_object(&b, response);
@@ -3698,14 +3698,14 @@ static int handle_get_whitelist_user(struct ubus_context *ctx, struct ubus_objec
         }else{
             json_object_object_add(user_obj, "nickname", json_object_new_string(""));
             json_object_object_add(user_obj, "hostname", json_object_new_string(""));
-        }       
+        }
         json_object_array_add(user_array, user_obj);
     }
     json_object_object_add(data_obj, "list", user_array);
     json_object_object_add(response, "data", data_obj);
-    
+
     uci_free_context(uci_ctx);
-    
+
     struct blob_buf b = {};
     blob_buf_init(&b, 0);
     blobmsg_add_object(&b, response);
@@ -3716,7 +3716,7 @@ static int handle_get_whitelist_user(struct ubus_context *ctx, struct ubus_objec
 }
 static int handle_add_whitelist_user(struct ubus_context *ctx, struct ubus_object *obj,
                     struct ubus_request_data *req, const char *method,
-                    struct blob_attr *msg) 
+                    struct blob_attr *msg)
 {
     struct json_object *response = json_object_new_object();
     int i;
@@ -3824,7 +3824,7 @@ static char *get_model(void) {
     }
     if (board_json)
         json_object_put(board_json);
-    
+
 
     if (strcmp(model, "Unknown") == 0) {
         char buf[256] = {0};
@@ -3832,7 +3832,7 @@ static char *get_model(void) {
             strncpy(model, buf, sizeof(model) - 1);
         }
     }
-    
+
     return strdup(model);
 }
 
@@ -3854,21 +3854,21 @@ static int get_uptime(void) {
 static int read_file_buf(const char *file, char *buf, int len) {
     if (!file || !buf || len <= 0)
         return -1;
-    
+
     int fd = open(file, O_RDONLY | O_NONBLOCK, 0644);
     if (fd < 0) {
         return -1;
     }
-    
+
     int size = read(fd, buf, len - 1);
     close(fd);
-    
+
     if (size > 0) {
         buf[size] = '\0';
         str_trim(buf);
         return size;
     }
-    
+
     return -1;
 }
 
@@ -4378,11 +4378,11 @@ static int parse_tempinfo_output(char *output, int *cpu_temp, int *wifi_temp) {
     if (!output || !cpu_temp || !wifi_temp) {
         return -1;
     }
-    
+
 
     *cpu_temp = -1;
     *wifi_temp = -1;
-    
+
 
     char *cpu_label = strstr(output, "CPU:");
     if (cpu_label) {
@@ -4412,7 +4412,7 @@ static int parse_tempinfo_output(char *output, int *cpu_temp, int *wifi_temp) {
             }
         }
     }
-    
+
 
     char *wifi_label = strstr(output, "WiFi:");
     if (wifi_label) {
@@ -4442,19 +4442,19 @@ static int parse_tempinfo_output(char *output, int *cpu_temp, int *wifi_temp) {
             }
         }
     }
-    
+
 
     if (*cpu_temp > 0 || *wifi_temp > 0) {
         return 0;
     }
-    
+
     return -1;
 }
 
 
 static int get_cpu_temperature(void) {
     int cpu_temp = -1;
-    int wifi_temp = -1; 
+    int wifi_temp = -1;
     int i;
 
     if (is_x86_board()) {
@@ -4470,7 +4470,7 @@ static int get_cpu_temperature(void) {
             char output[256] = {0};
             char line[256] = {0};
             size_t total_read = 0;
-            
+
 
             while (fgets(line, sizeof(line), fp) != NULL && total_read < sizeof(output) - 1) {
                 size_t line_len = strlen(line);
@@ -4483,19 +4483,19 @@ static int get_cpu_temperature(void) {
                 }
             }
             pclose(fp);
-            
+
 
             if (parse_tempinfo_output(output, &cpu_temp, &wifi_temp) == 0 && cpu_temp > 0) {
                 return cpu_temp;
             }
         }
     }
-    
+
 
     char temp_buf[64] = {0};
     int temp_millidegrees = 0;
     int temp_degrees = 0;
-    
+
 
 
     if (read_file_buf("/sys/class/thermal/thermal_zone0/temp", temp_buf, sizeof(temp_buf)) > 0) {
@@ -4509,7 +4509,7 @@ static int get_cpu_temperature(void) {
             }
         }
     }
-    
+
 
 
     for (i = 0; i < 10; i++) {
@@ -4525,7 +4525,7 @@ static int get_cpu_temperature(void) {
             }
         }
     }
-    
+
 
     return -1;
 }
@@ -4542,7 +4542,7 @@ static int get_wifi_temperature(void) {
             char output[256] = {0};
             char line[256] = {0};
             size_t total_read = 0;
-            
+
 
             while (fgets(line, sizeof(line), fp) != NULL && total_read < sizeof(output) - 1) {
                 size_t line_len = strlen(line);
@@ -4555,18 +4555,18 @@ static int get_wifi_temperature(void) {
                 }
             }
             pclose(fp);
-            
+
 
             if (parse_tempinfo_output(output, &cpu_temp, &wifi_temp) == 0 && wifi_temp > 0) {
                 return wifi_temp;
             }
         }
     }
-    
+
 
     char temp_buf[64] = {0};
     int temp_degrees = 0;
-    
+
 
 
     if (read_file_buf("/sys/class/ieee80211/phy0/temperature", temp_buf, sizeof(temp_buf)) > 0) {
@@ -4576,7 +4576,7 @@ static int get_wifi_temperature(void) {
             return temp_degrees;
         }
     }
-    
+
 
     for (i = 0; i < 10; i++) {
         char path[256] = {0};
@@ -4588,7 +4588,7 @@ static int get_wifi_temperature(void) {
             }
         }
     }
-    
+
 
     return -1;
 }
@@ -4603,10 +4603,10 @@ static int get_cpu_model_name_from_proc(char *model_name, size_t len) {
     if (!fp) {
         return -1;
     }
-    
+
     char line[256] = {0};
     int found = 0;
-    
+
     while (fgets(line, sizeof(line), fp)) {
 
         if (strncmp(line, "model name", 10) == 0) {
@@ -4660,13 +4660,13 @@ static int get_cpu_model_name_from_proc(char *model_name, size_t len) {
             }
         }
     }
-    
+
     fclose(fp);
-    
+
     if (!found) {
         return -1;
     }
-    
+
     LOG_DEBUG("get_cpu_model_name_from_proc: found CPU model: %s\n", model_name);
     return 0;
 }
@@ -4677,13 +4677,13 @@ static int get_cpu_model_name(char *model_name, size_t len) {
     if (get_cpu_model_name_from_proc(model_name, len) == 0) {
         return 0;
     }
-    
+
 
     LOG_DEBUG("get_cpu_model_name: CPU model name not found in /proc/cpuinfo, trying ubus call system board\n");
     if (get_cpu_model_name_from_ubus(model_name, len) == 0) {
         return 0;
     }
-    
+
     return -1;
 }
 
@@ -4695,12 +4695,12 @@ static int get_cpu_model_name_from_ubus(char *model_name, size_t len) {
         LOG_ERROR("get_cpu_model_name_from_ubus: failed to call ubus system board\n");
         return -1;
     }
-    
+
 
     char ubus_output[2048] = {0};
     size_t total_read = 0;
     char line_buf[256] = {0};
-    
+
     while (fgets(line_buf, sizeof(line_buf), ubus_fp) && total_read < sizeof(ubus_output) - 1) {
         size_t line_len = strlen(line_buf);
         if (total_read + line_len < sizeof(ubus_output) - 1) {
@@ -4711,21 +4711,21 @@ static int get_cpu_model_name_from_ubus(char *model_name, size_t len) {
         }
     }
     pclose(ubus_fp);
-    
+
     if (strlen(ubus_output) == 0) {
         LOG_ERROR("get_cpu_model_name_from_ubus: ubus output is empty\n");
         return -1;
     }
-    
+
 
     struct json_object *board_obj = json_tokener_parse(ubus_output);
     if (!board_obj) {
         LOG_ERROR("get_cpu_model_name_from_ubus: failed to parse ubus JSON output\n");
         return -1;
     }
-    
+
     int found = 0;
-    
+
 
     struct json_object *release_obj = json_object_object_get(board_obj, "release");
     if (release_obj) {
@@ -4740,7 +4740,7 @@ static int get_cpu_model_name_from_ubus(char *model_name, size_t len) {
             }
         }
     }
-    
+
 
     if (!found) {
         struct json_object *system_obj = json_object_object_get(board_obj, "system");
@@ -4754,14 +4754,14 @@ static int get_cpu_model_name_from_ubus(char *model_name, size_t len) {
             }
         }
     }
-    
+
     json_object_put(board_obj);
-    
+
     if (!found) {
         LOG_ERROR("get_cpu_model_name_from_ubus: CPU model name not found in ubus system board\n");
         return -1;
     }
-    
+
     LOG_DEBUG("get_cpu_model_name_from_ubus: found CPU model: %s\n", model_name);
     return 0;
 }
@@ -4773,11 +4773,11 @@ static int get_os_release_field(const char *field_name, char *value, size_t len)
         LOG_ERROR("get_os_release_field: failed to open /etc/os-release\n");
         return -1;
     }
-    
+
     char line[256] = {0};
     size_t field_len = strlen(field_name);
     int found = 0;
-    
+
     while (fgets(line, sizeof(line), fp)) {
 
         if (strncmp(line, field_name, field_len) == 0 && line[field_len] == '=') {
@@ -4786,7 +4786,7 @@ static int get_os_release_field(const char *field_name, char *value, size_t len)
             if (*value_start == '"' || *value_start == '\'') {
                 value_start++;
             }
-            
+
 
             char *value_end = value_start;
             while (*value_end != '\0' && *value_end != '\n' && *value_end != '\r') {
@@ -4795,7 +4795,7 @@ static int get_os_release_field(const char *field_name, char *value, size_t len)
                 }
                 value_end++;
             }
-            
+
 
             size_t value_size = value_end - value_start;
             if (value_size > 0 && value_size < len) {
@@ -4807,14 +4807,14 @@ static int get_os_release_field(const char *field_name, char *value, size_t len)
             }
         }
     }
-    
+
     fclose(fp);
-    
+
     if (!found) {
         LOG_ERROR("get_os_release_field: field %s not found in /etc/os-release\n", field_name);
         return -1;
     }
-    
+
     LOG_DEBUG("get_os_release_field: found %s = %s\n", field_name, value);
     return 0;
 }
@@ -4977,12 +4977,12 @@ static struct json_object *get_dashboard_system_status(void) {
     char buf[256] = {0};
     char result[128] = {0};
 	int hour;
-    
+
 
     char *model = get_model();
     json_object_object_add(system_status, "model", json_object_new_string(model));
     free(model);
-    
+
 
     char cpu_model_name[256] = {0};
     if (get_cpu_model_name(cpu_model_name, sizeof(cpu_model_name)) == 0) {
@@ -4990,7 +4990,7 @@ static struct json_object *get_dashboard_system_status(void) {
     } else {
         json_object_object_add(system_status, "cpu_model_name", json_object_new_string("Unknown"));
     }
-    
+
 
     char hostname[128] = {0};
     if (read_file_buf("/proc/sys/kernel/hostname", hostname, sizeof(hostname)) > 0) {
@@ -4998,7 +4998,7 @@ static struct json_object *get_dashboard_system_status(void) {
     } else {
         json_object_object_add(system_status, "hostname", json_object_new_string("Unknown"));
     }
-    
+
 
     char openwrt_version[64] = {0};
     if (get_os_release_field("VERSION", openwrt_version, sizeof(openwrt_version)) == 0) {
@@ -5006,7 +5006,7 @@ static struct json_object *get_dashboard_system_status(void) {
     } else {
         json_object_object_add(system_status, "openwrt_version", json_object_new_string("Unknown"));
     }
-    
+
 
     char arch[64] = {0};
     if (get_os_release_field("OPENWRT_ARCH", arch, sizeof(arch)) == 0) {
@@ -5014,7 +5014,7 @@ static struct json_object *get_dashboard_system_status(void) {
     } else {
         json_object_object_add(system_status, "arch", json_object_new_string("Unknown"));
     }
-    
+
 
     char fwx_version_buf[32] = {0};
     if (read_file_buf("/etc/fwx_version", fwx_version_buf, sizeof(fwx_version_buf)) > 0) {
@@ -5066,11 +5066,11 @@ static struct json_object *get_dashboard_system_status(void) {
     } else {
         json_object_object_add(system_status, "kernel_version", json_object_new_string("Unknown"));
     }
-    
+
 
     int uptime = get_uptime();
     json_object_object_add(system_status, "uptime", json_object_new_int(uptime));
-    
+
 
     memset(result, 0, sizeof(result));
     int total_mem_kb = 0;
@@ -5082,11 +5082,11 @@ static struct json_object *get_dashboard_system_status(void) {
     if (exec_with_result_line("free | grep Mem | awk '{print $3}'", result, sizeof(result)) == 0) {
         used_mem_kb = atoi(result);
     }
-    
+
 
     json_object_object_add(system_status, "total_mem", json_object_new_int(total_mem_kb));
     json_object_object_add(system_status, "used_mem", json_object_new_int(used_mem_kb));
-    
+
 
     memset(result, 0, sizeof(result));
     int cpu_usage = 0;
@@ -5096,17 +5096,17 @@ static struct json_object *get_dashboard_system_status(void) {
         cpu_usage = 0;
     } else {
         cpu_usage = 100 - atoi(result);
-    } 
+    }
 
 
     snprintf(buf, sizeof(buf), "%d", cpu_usage);
     json_object_object_add(system_status, "cpu", json_object_new_string(buf));
-    
+
 
     int connections = fwx_stat_read_conntrack_count();
     json_object_object_add(system_status, "connections", json_object_new_int(connections));
-    
-    
+
+
 
     extern struct list_head client_list;
     int online_client_num = 0;
@@ -5117,14 +5117,14 @@ static struct json_object *get_dashboard_system_status(void) {
         }
     }
     json_object_object_add(system_status, "client_num", json_object_new_int(online_client_num));
-    
+
 
     struct json_object *storage_obj = json_object_new_object();
     FILE *df_fp = popen("df -k", "r");
     if (df_fp) {
         char line[512];
         int found_tmp = 0, found_root = 0, found_boot = 0;
-        
+
 
         if (fgets(line, sizeof(line), df_fp)) {
 
@@ -5134,10 +5134,10 @@ static struct json_object *get_dashboard_system_status(void) {
                 unsigned long long available_kb = 0;  // 仅用于解析，不返回
                 int use_percent = 0;  // 仅用于解析，不返回
                 char mount_point[256] = {0};
-                
 
 
-                if (sscanf(line, "%255s %llu %llu %llu %d%% %255s", 
+
+                if (sscanf(line, "%255s %llu %llu %llu %d%% %255s",
                           filesystem, &total_kb, &used_kb, &available_kb, &use_percent, mount_point) >= 6) {
 
                     if (strcmp(mount_point, "/tmp") == 0 && !found_tmp) {
@@ -5160,7 +5160,7 @@ static struct json_object *get_dashboard_system_status(void) {
                         found_boot = 1;
                     }
                 }
-                
+
 
                 if (found_tmp && found_root && found_boot) {
                     break;
@@ -5169,7 +5169,7 @@ static struct json_object *get_dashboard_system_status(void) {
         }
         pclose(df_fp);
     }
-    
+
 
     if (!json_object_object_get(storage_obj, "tmp")) {
         struct json_object *tmp_obj = json_object_new_object();
@@ -5189,18 +5189,18 @@ static struct json_object *get_dashboard_system_status(void) {
         json_object_object_add(boot_obj, "used_kb", json_object_new_int64(0));
         json_object_object_add(storage_obj, "boot", boot_obj);
     }
-    
+
     json_object_object_add(system_status, "storage", storage_obj);
-    
+
 
     struct json_object *flow_obj = json_object_new_object();
     unsigned long long today_up = 0;
     unsigned long long today_down = 0;
-    
+
 
     extern traffic_stat_t g_global_hourly_traffic[HOURS_PER_DAY];
     extern u_int32_t g_global_traffic_date;
-    
+
 
     u_int32_t today = get_today_start_timestamp();
     if (g_global_traffic_date == today) {
@@ -5214,11 +5214,11 @@ static struct json_object *get_dashboard_system_status(void) {
         today_down = 0;
         today_up = 0;
     }
-    
+
 
     today_down = today_down / 1024;
     today_up = today_up / 1024;
-    
+
     json_object_object_add(flow_obj, "today_up", json_object_new_int64(today_up));
     json_object_object_add(flow_obj, "today_down", json_object_new_int64(today_down));
     json_object_object_add(system_status, "flow", flow_obj);
@@ -5228,13 +5228,13 @@ static struct json_object *get_dashboard_system_status(void) {
     if (cpu_temp > 0) {
         json_object_object_add(system_status, "cpu_temp", json_object_new_int(cpu_temp));
     }
-    
+
 
     int wifi_temp = get_wifi_temperature();
     if (wifi_temp > 0) {
         json_object_object_add(system_status, "wifi_temp", json_object_new_int(wifi_temp));
     }
-    
+
     return system_status;
 }
 
@@ -5242,33 +5242,33 @@ static struct json_object *get_dashboard_system_status(void) {
 static struct json_object *get_dashboard_network_status(void) {
     struct json_object *network_status = json_object_new_object();
     struct uci_context *uci_ctx = uci_alloc_context();
-    
 
-    int work_mode = 1; 
+
+    int work_mode = 1;
     if (uci_ctx) {
         work_mode = fwx_uci_get_int_value(uci_ctx, "appfilter.global.work_mode");
         if (work_mode < 0) work_mode = 1;
     }
     json_object_object_add(network_status, "work_mode", json_object_new_int(work_mode));
-    
 
 
-    int internet_status = 1;  
+
+    int internet_status = 1;
     char wan_check_buf[256] = {0};
-    
 
-    
+
+
     json_object_object_add(network_status, "internet", json_object_new_int(g_fwx_status.internet));
-    
+
     struct json_object *lan_obj = json_object_new_object();
     iface_status_t lan_status;
     memset(&lan_status, 0, sizeof(lan_status));
-    
+
     if (get_iface_status("lan", &lan_status) == 0) {
-        
+
 	    json_object_object_add(lan_obj, "ip", json_object_new_string(strlen(lan_status.ip) > 0 ? lan_status.ip : ""));
 	    json_object_object_add(lan_obj, "mask", json_object_new_string(strlen(lan_status.mask) > 0 ? lan_status.mask : ""));
-	
+
 	    json_object_object_add(lan_obj, "gateway", json_object_new_string(strlen(lan_status.gateway) > 0 ? lan_status.gateway : ""));
 
 	    struct json_object *lan_dns = json_object_new_array();
@@ -5280,13 +5280,13 @@ static struct json_object *get_dashboard_network_status(void) {
 	    }
 	    json_object_object_add(lan_obj, "dns", lan_dns);
     }
-    
+
     json_object_object_add(network_status, "lan", lan_obj);
-    
+
     struct json_object *wan_obj = json_object_new_object();
     iface_status_t wan_status;
     memset(&wan_status, 0, sizeof(wan_status));
-	
+
     if (get_iface_status("wan", &wan_status) == 0){
 	    json_object_object_add(wan_obj, "ip", json_object_new_string(wan_status.ip));
 	    json_object_object_add(wan_obj, "mask", json_object_new_string(wan_status.mask));
@@ -5298,16 +5298,16 @@ static struct json_object *get_dashboard_network_status(void) {
 	    if (strlen(wan_status.dns2) > 0) {
 	        json_object_array_add(wan_dns, json_object_new_string(wan_status.dns2));
 	    }
-		
+
 		json_object_object_add(wan_obj, "dns", wan_dns);
     }
     json_object_object_add(network_status, "wan", wan_obj);
     json_object_object_add(network_status, "port_status", get_dashboard_port_status());
-    
+
     if (uci_ctx) {
         uci_free_context(uci_ctx);
     }
-    
+
     return network_status;
 }
 
@@ -5315,7 +5315,7 @@ static struct json_object *get_dashboard_network_status(void) {
 static struct json_object *get_dashboard_active_app(void) {
     struct json_object *active_app = json_object_new_object();
     struct json_object *app_list = json_object_new_array();
-    
+
     FILE *fp = fopen("/proc/net/af_active_app", "r");
     if (!fp) {
 
@@ -5323,11 +5323,11 @@ static struct json_object *get_dashboard_active_app(void) {
         json_object_object_add(active_app, "list", app_list);
         return active_app;
     }
-    
+
     char line[1024] = {0};
     int line_count = 0;
     int total_count = 0;
-    
+
 
     while (fgets(line, sizeof(line), fp)) {
 
@@ -5335,13 +5335,13 @@ static struct json_object *get_dashboard_active_app(void) {
             line_count++;
             continue;
         }
-        
+
 
         str_trim(line);
         if (strlen(line) == 0) {
             continue;
         }
-        
+
 
 
 
@@ -5364,7 +5364,7 @@ static struct json_object *get_dashboard_active_app(void) {
         int parsed = sscanf(line, "%u %s %s %u %s %u %s %u %u %63s %u %63s",
                            &app_id, mac, src_ip, &src_port, dst_ip, &dst_port,
                            proto, &app_proto, &drop, host, &last_update, uri);
-        
+
 
         if (parsed < 10) {
             continue; // 跳过无法解析的行
@@ -5376,15 +5376,15 @@ static struct json_object *get_dashboard_active_app(void) {
         if (parsed < 12) {
             uri[0] = '\0';
         }
-        
+
 
         str_trim(host);
         str_trim(uri);
-        
+
 
         struct json_object *app = json_object_new_object();
         json_object_object_add(app, "id", json_object_new_int(app_id));
-        
+
 
         const char *app_name = get_app_name_by_id(app_id);
         if (app_name && strlen(app_name) > 0) {
@@ -5392,7 +5392,7 @@ static struct json_object *get_dashboard_active_app(void) {
         } else {
             json_object_object_add(app, "name", json_object_new_string(""));
         }
-        
+
 
         json_object_object_add(app, "mac", json_object_new_string(mac));
 
@@ -5404,50 +5404,50 @@ static struct json_object *get_dashboard_active_app(void) {
             json_object_object_add(app, "hostname", json_object_new_string(""));
             json_object_object_add(app, "nickname", json_object_new_string(""));
         }
-        
+
 
         json_object_object_add(app, "src_ip", json_object_new_string(src_ip));
         json_object_object_add(app, "dst_ip", json_object_new_string(dst_ip));
-        
+
 
         json_object_object_add(app, "src_port", json_object_new_int(src_port));
         json_object_object_add(app, "dst_port", json_object_new_int(dst_port));
-        
+
 
         json_object_object_add(app, "protocol", json_object_new_string(proto));
-        
+
 
         json_object_object_add(app, "app_proto", json_object_new_int(app_proto));
-        
+
 
         json_object_object_add(app, "drop", json_object_new_int(drop));
-        
+
 
         if (host[0] != '\0' && strcmp(host, "-") != 0) {
             json_object_object_add(app, "domain", json_object_new_string(host));
         } else {
             json_object_object_add(app, "domain", json_object_new_string(""));
         }
-        
+
 
         if (app_proto == 1 && uri[0] != '\0' && strcmp(uri, "-") != 0) {
             json_object_object_add(app, "uri", json_object_new_string(uri));
         } else {
             json_object_object_add(app, "uri", json_object_new_string(""));
         }
-        
+
 
         json_object_object_add(app, "timestamp", json_object_new_int(last_update));
-        
+
         json_object_array_add(app_list, app);
         total_count++;
     }
-    
+
     fclose(fp);
-    
+
     json_object_object_add(active_app, "total", json_object_new_int(total_count));
     json_object_object_add(active_app, "list", app_list);
-    
+
     return active_app;
 }
 
@@ -5455,14 +5455,14 @@ static struct json_object *get_dashboard_active_app(void) {
 static int compare_host_timestamp(const void *a, const void *b) {
     struct json_object *obj_a = *(struct json_object **)a;
     struct json_object *obj_b = *(struct json_object **)b;
-    
+
     struct json_object *ts_a, *ts_b;
     json_object_object_get_ex(obj_a, "timestamp", &ts_a);
     json_object_object_get_ex(obj_b, "timestamp", &ts_b);
-    
+
     int ts_val_a = ts_a ? json_object_get_int(ts_a) : 0;
     int ts_val_b = ts_b ? json_object_get_int(ts_b) : 0;
-    
+
     return ts_val_b - ts_val_a;  // 降序排序
 }
 
@@ -5497,11 +5497,11 @@ static struct json_object *get_dashboard_active_host(void) {
         json_object_object_add(active_host, "list", host_list);
         return active_host;
     }
-    
+
     char line[1024] = {0};
     int line_count = 0;
     int total_count = 0;
-    
+
 
     while (fgets(line, sizeof(line), fp)) {
 
@@ -5509,13 +5509,13 @@ static struct json_object *get_dashboard_active_host(void) {
             line_count++;
             continue;
         }
-        
+
 
         str_trim(line);
         if (strlen(line) == 0) {
             continue;
         }
-        
+
 
 
         char host_buf[64] = {0};
@@ -5528,41 +5528,41 @@ static struct json_object *get_dashboard_active_host(void) {
         unsigned int app_proto;
         unsigned int drop;
         unsigned int last_update;
-        
+
 
         int parsed = sscanf(line, "%63s %s %s %u %s %u %s %u %u %u",
                            host_buf, mac, src_ip, &src_port, dst_ip, &dst_port,
                            proto, &app_proto, &drop, &last_update);
-        
+
 
         if (parsed < 10) {
             continue; // 跳过无法解析的行
         }
-        
+
 
         time_t current_time = time(NULL);
         if (current_time > last_update && (current_time - last_update) > 180) {
             continue; // 跳过超时的记录（3分钟 = 180秒）
         }
-        
+
 
         str_trim(host_buf);
-        
+
 
         if (is_invalid_active_host_value(host_buf)) {
             continue;
         }
-        
+
 
         struct json_object *host_obj = json_object_new_object();
-        
+
 
         json_object_object_add(host_obj, "mac", json_object_new_string(mac));
-        
+
 
         extern struct list_head client_list;
         client_node_t *client = find_client_node(mac);
-        
+
 
         char display_name[128] = {0};
         if (client && client->nickname[0] != '\0') {
@@ -5573,7 +5573,7 @@ static struct json_object *get_dashboard_active_host(void) {
             strncpy(display_name, mac, sizeof(display_name) - 1);
         }
         json_object_object_add(host_obj, "name", json_object_new_string(display_name));
-        
+
 
         if (client) {
             json_object_object_add(host_obj, "hostname", json_object_new_string(client->hostname[0] ? client->hostname : ""));
@@ -5582,12 +5582,12 @@ static struct json_object *get_dashboard_active_host(void) {
             json_object_object_add(host_obj, "hostname", json_object_new_string(""));
             json_object_object_add(host_obj, "nickname", json_object_new_string(""));
         }
-        
+
 
         char url[128] = {0};
-        if (app_proto == 1) {  
+        if (app_proto == 1) {
             snprintf(url, sizeof(url), "http://%s", host_buf);
-        } else if (app_proto == 2) {  
+        } else if (app_proto == 2) {
             snprintf(url, sizeof(url), "https://%s", host_buf);
         } else {
 
@@ -5595,25 +5595,25 @@ static struct json_object *get_dashboard_active_host(void) {
         }
         json_object_object_add(host_obj, "url", json_object_new_string(url));
         json_object_object_add(host_obj, "host", json_object_new_string(host_buf));
-        
+
 
         json_object_object_add(host_obj, "app_proto", json_object_new_int(app_proto));
-        
+
 
 
         json_object_object_add(host_obj, "timestamp", json_object_new_int(last_update));
-        
+
         json_object_array_add(host_list, host_obj);
         total_count++;
     }
-    
+
     fclose(fp);
-    
+
 
     if (total_count > 0) {
         json_object_array_sort(host_list, compare_host_timestamp);
     }
-    
+
 
     #define MAX_HOST_LIST_SIZE 10
     int array_len = json_object_array_length(host_list);
@@ -5624,10 +5624,10 @@ static struct json_object *get_dashboard_active_host(void) {
             json_object_array_del_idx(host_list, i, 1);
         }
     }
-    
+
     json_object_object_add(active_host, "total", json_object_new_int(total_count));
     json_object_object_add(active_host, "list", host_list);
-    
+
     return active_host;
 }
 
@@ -5639,18 +5639,18 @@ static int get_interface_device(const char *interface_name, char *device_name, s
         LOG_ERROR("get_interface_device: failed to allocate UCI context\n");
         return -1;
     }
-    
+
     char uci_key[128] = {0};
     snprintf(uci_key, sizeof(uci_key), "network.%s.device", interface_name);
-    
+
     int ret = fwx_uci_get_value(uci_ctx, uci_key, device_name, device_name_len);
     uci_free_context(uci_ctx);
-    
+
     if (ret != 0) {
         LOG_ERROR("get_interface_device: failed to get device for interface %s\n", interface_name);
         return -1;
     }
-    
+
     return 0;
 }
 
@@ -5661,20 +5661,20 @@ static int read_interface_traffic(const char *ifname, unsigned long long *up_byt
         LOG_ERROR("read_interface_traffic: failed to open /proc/net/dev\n");
         return -1;
     }
-    
+
     char line[512];
     int found = 0;
-    
+
 
     fgets(line, sizeof(line), netdev_fp);
     fgets(line, sizeof(line), netdev_fp);
-    
+
     while (fgets(line, sizeof(line), netdev_fp)) {
         char interface[32] = {0};
         unsigned long long rx_pkts, rx_errs, rx_drop, rx_fifo, rx_frame, rx_compressed, rx_multicast;
         unsigned long long tx_pkts, tx_errs, tx_drop, tx_fifo, tx_colls, tx_carrier, tx_compressed;
         unsigned long long rx_bytes = 0, tx_bytes = 0;
-        
+
 
         char *colon = strchr(line, ':');
         if (colon) {
@@ -5683,13 +5683,13 @@ static int read_interface_traffic(const char *ifname, unsigned long long *up_byt
                 strncpy(interface, line, ifname_len);
                 interface[ifname_len] = '\0';
                 str_trim(interface);
-                
 
-                if (sscanf(colon + 1, "%llu %llu %llu %llu %llu %llu %llu %llu %llu", 
+
+                if (sscanf(colon + 1, "%llu %llu %llu %llu %llu %llu %llu %llu %llu",
                            &rx_bytes, &rx_pkts, &rx_errs, &rx_drop, &rx_fifo, &rx_frame, &rx_compressed, &rx_multicast, &tx_bytes) >= 9) {
                     if (strcmp(interface, ifname) == 0) {
-                        *down_bytes = rx_bytes;  
-                        *up_bytes = tx_bytes;    
+                        *down_bytes = rx_bytes;
+                        *up_bytes = tx_bytes;
                         found = 1;
                         break;
                     }
@@ -5697,7 +5697,7 @@ static int read_interface_traffic(const char *ifname, unsigned long long *up_byt
             }
         }
     }
-    
+
     fclose(netdev_fp);
     return found ? 0 : -1;
 }
@@ -5707,35 +5707,35 @@ static void add_interface_traffic_point(unsigned long long up_bytes, unsigned lo
     u_int32_t current_time = time(NULL);
     unsigned int up_rate = 0;
     unsigned int down_rate = 0;
-    
+
 
     if (last_traffic_time > 0 && current_time > last_traffic_time) {
         unsigned long long up_diff = (up_bytes > last_up_bytes) ? (up_bytes - last_up_bytes) : 0;
         unsigned long long down_diff = (down_bytes > last_down_bytes) ? (down_bytes - last_down_bytes) : 0;
         unsigned int time_diff = current_time - last_traffic_time;
-        
+
         if (time_diff > 0) {
             up_rate = (unsigned int)(up_diff / time_diff);
             down_rate = (unsigned int)(down_diff / time_diff);
         }
     }
-    
+
 
     interface_traffic_node_t *node = (interface_traffic_node_t *)calloc(1, sizeof(interface_traffic_node_t));
     if (!node) {
         return;
     }
-    
+
     node->up_bytes = up_bytes;
     node->down_bytes = down_bytes;
     node->up_rate = up_rate;
     node->down_rate = down_rate;
     node->timestamp = current_time;
-    
+
 
     list_add(&node->list, &interface_traffic_list);
     interface_traffic_count++;
-    
+
 
     if (interface_traffic_count > MAX_INTERFACE_TRAFFIC_POINTS) {
         interface_traffic_node_t *old_node = list_last_entry(&interface_traffic_list, interface_traffic_node_t, list);
@@ -5743,16 +5743,16 @@ static void add_interface_traffic_point(unsigned long long up_bytes, unsigned lo
         free(old_node);
         interface_traffic_count--;
     }
-    
+
 
     last_up_bytes = up_bytes;
     last_down_bytes = down_bytes;
     last_traffic_time = current_time;
-    
+
     LOG_DEBUG("add_interface_traffic_point: up_rate=%u B/s, down_rate=%u B/s\n", up_rate, down_rate);
 }
 
-void check_and_update_monitor_device(void) {    
+void check_and_update_monitor_device(void) {
     char monitor_device[64] = {0};
     char wan_device_name[16] = {0};
 
@@ -5760,7 +5760,7 @@ void check_and_update_monitor_device(void) {
     struct uci_context *uci_ctx = uci_alloc_context();
     if (!uci_ctx)
         return;
-    
+
     int ret = fwx_uci_get_value(uci_ctx, "fwx.dashboard.monitor_device", monitor_device, sizeof(monitor_device));
     if (ret == 0 && strlen(monitor_device) > 0) {
         strncpy(g_interface_name, monitor_device, sizeof(g_interface_name) - 1);
@@ -5802,7 +5802,7 @@ static struct json_object *get_dashboard_interface_traffic(void) {
         json_object_object_add(traffic, "down", json_object_new_int64(node->down_rate));
         json_object_array_add(traffic_array, traffic);
     }
-    
+
     int current_count = interface_traffic_count;
     while (current_count < MAX_INTERFACE_TRAFFIC_POINTS) {
         struct json_object *traffic = json_object_new_object();
@@ -5811,9 +5811,9 @@ static struct json_object *get_dashboard_interface_traffic(void) {
         json_object_array_add(traffic_array, traffic);
         current_count++;
     }
-    
+
     json_object_object_add(interface_traffic, "traffic", traffic_array);
-    
+
     return interface_traffic;
 }
 
@@ -5827,13 +5827,13 @@ struct json_object *fwx_api_get_dashboard_common(struct json_object *req_obj) {
     struct json_object *active_app = get_dashboard_active_app();
     struct json_object *active_host = get_dashboard_active_host();
     struct json_object *interface_traffic = get_dashboard_interface_traffic();
-    
+
     json_object_object_add(data_obj, "system_status", system_status);
     json_object_object_add(data_obj, "network_status", network_status);
     json_object_object_add(data_obj, "active_app", active_app);
     json_object_object_add(data_obj, "active_host", active_host);
     json_object_object_add(data_obj, "interface_traffic", interface_traffic);
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
@@ -5841,47 +5841,47 @@ struct json_object *fwx_api_get_dashboard_common(struct json_object *req_obj) {
 struct json_object *fwx_api_get_hourly_top_apps(struct json_object *req_obj) {
 	int i;
     struct json_object *data_obj = json_object_new_object();
-    
+
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
-    
+
+
     struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
     if (!mac_obj) {
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *mac = json_object_get_string(mac_obj);
     if (!mac) {
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct json_object *date_obj = json_object_object_get(req_obj, "date");
     u_int32_t target_date = 0;
     int is_today = 1;
     u_int32_t today = get_today_start_timestamp();
-    
+
     if (date_obj) {
         target_date = (u_int32_t)json_object_get_int64(date_obj);
         is_today = (target_date == today);
     } else {
         target_date = today;
     }
-    
-    
+
+
     client_node_t *client = find_client_node(mac);
     if (!client) {
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     daily_hourly_stat_t *stat = NULL;
-    
+
     if (is_today) {
-        
+
         update_hourly_top_apps(client);
         stat = get_today_stat(client);
         if (!stat) {
@@ -5889,28 +5889,28 @@ struct json_object *fwx_api_get_hourly_top_apps(struct json_object *req_obj) {
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
     } else {
-        
+
         char stats_dir[512] = {0};
         char mac_dirname[64] = {0};
         char mac_buf[MAX_MAC_LEN] = {0};
         strncpy(mac_buf, client->mac, sizeof(mac_buf) - 1);
-        
-        
+
+
         for (i = 0; mac_buf[i] != '\0'; i++) {
             if (mac_buf[i] == ':') {
                 mac_buf[i] = '_';
             }
         }
-        
+
         char date_str[32] = {0};
         time_t t = (time_t)target_date;
         struct tm *tm_info = localtime(&t);
         if (tm_info) {
             strftime(date_str, sizeof(date_str), "%Y-%m-%d", tm_info);
-        } 
-        snprintf(stats_dir, sizeof(stats_dir), "%s/%s/stats/hourly_%s.json", 
+        }
+        snprintf(stats_dir, sizeof(stats_dir), "%s/%s/stats/hourly_%s.json",
                  get_client_data_base_dir(), mac_buf, date_str);
- 
+
         struct json_object *file_json = json_object_from_file(stats_dir);
         if (!file_json) {
             json_object_put(data_obj);
@@ -5920,27 +5920,27 @@ struct json_object *fwx_api_get_hourly_top_apps(struct json_object *req_obj) {
         json_object_object_add(data_obj, "mac", json_object_new_string(client->mac));
         json_object_object_add(data_obj, "date", json_object_new_int64(target_date));
         json_object_object_add(data_obj, "is_today", json_object_new_int(0));
-        
+
         struct json_object *hourly_stats = json_object_object_get(file_json, "hourly_stats");
         if (hourly_stats) {
-            
+
             json_object_object_add(data_obj, "hourly_stats", hourly_stats);
         } else {
             json_object_object_add(data_obj, "hourly_stats", json_object_new_array());
         }
-          
+
         json_object_put(file_json);
         return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
     }
-    
-    
+
+
     struct json_object *hourly_array = json_object_new_array();
     int hour;
     for (hour = 0; hour < HOURS_PER_DAY; hour++) {
         struct json_object *hour_obj = json_object_new_object();
         struct json_object *apps_array = json_object_new_array();
-        
-        json_object_object_add(hour_obj, "hour", json_object_new_int(hour));  
+
+        json_object_object_add(hour_obj, "hour", json_object_new_int(hour));
         for (i = 0; i < TOP_APP_PER_HOUR; i++) {
             if (stat->hourly_top_apps[hour][i] > 0) {
                 struct json_object *app_obj = json_object_new_object();
@@ -5952,8 +5952,8 @@ struct json_object *fwx_api_get_hourly_top_apps(struct json_object *req_obj) {
                 } else {
                     json_object_object_add(app_obj, "name", json_object_new_string("unknown"));
                 }
-                
-                
+
+
                 unsigned long long app_time = 0;
                 if (is_today && client) {
                     u_int32_t today_start = get_today_start_timestamp();
@@ -5975,11 +5975,11 @@ struct json_object *fwx_api_get_hourly_top_apps(struct json_object *req_obj) {
                     }
                 }
                 json_object_object_add(app_obj, "time", json_object_new_int64(app_time));
-                
+
                 json_object_array_add(apps_array, app_obj);
             }
         }
-        json_object_object_add(hour_obj, "apps", apps_array);    
+        json_object_object_add(hour_obj, "apps", apps_array);
         struct json_object *traffic_obj = json_object_new_object();
         json_object_object_add(traffic_obj, "up_bytes", json_object_new_int64(stat->hourly_traffic[hour].up_bytes));
         json_object_object_add(traffic_obj, "down_bytes", json_object_new_int64(stat->hourly_traffic[hour].down_bytes));
@@ -5988,12 +5988,12 @@ struct json_object *fwx_api_get_hourly_top_apps(struct json_object *req_obj) {
         json_object_object_add(hour_obj, "active_time", json_object_new_int64(stat->hourly_active_time[hour]));
         json_object_array_add(hourly_array, hour_obj);
     }
-    
+
     json_object_object_add(data_obj, "mac", json_object_new_string(client->mac));
     json_object_object_add(data_obj, "date", json_object_new_int64(stat->date));
     json_object_object_add(data_obj, "is_today", json_object_new_int(stat->is_today));
     json_object_object_add(data_obj, "hourly_stats", hourly_array);
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
@@ -6020,7 +6020,7 @@ struct json_object *fwx_api_get_daily_top_apps(struct json_object *req_obj) {
     u_int32_t target_date = 0;
     int is_today = 1;
     u_int32_t today = get_today_start_timestamp();
-    
+
     if (date_obj) {
         target_date = (u_int32_t)json_object_get_int64(date_obj);
         is_today = (target_date == today);
@@ -6033,21 +6033,21 @@ struct json_object *fwx_api_get_daily_top_apps(struct json_object *req_obj) {
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     daily_top_apps_stat_t *stat = NULL;
-    
+
     if (is_today) {
-        
+
         update_daily_top_apps(client);
         stat = get_today_top_apps_stat(client);
         if (!stat) {
             json_object_put(data_obj);
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
-        
-        
+
+
         struct json_object *apps_array = json_object_new_array();
-        
+
         for (i = 0; i < stat->count; i++) {
             struct json_object *app_obj = json_object_new_object();
             json_object_object_add(app_obj, "appid", json_object_new_int(stat->apps[i].appid));
@@ -6060,79 +6060,79 @@ struct json_object *fwx_api_get_daily_top_apps(struct json_object *req_obj) {
             }
             json_object_array_add(apps_array, app_obj);
         }
-        
+
         json_object_object_add(data_obj, "mac", json_object_new_string(client->mac));
         json_object_object_add(data_obj, "date", json_object_new_int64(stat->date));
         json_object_object_add(data_obj, "is_today", json_object_new_int(stat->is_today));
         json_object_object_add(data_obj, "count", json_object_new_int(stat->count));
         json_object_object_add(data_obj, "apps", apps_array);
     } else {
-        
+
         char stats_dir[512] = {0};
         char mac_buf[64] = {0};
         strncpy(mac_buf, client->mac, sizeof(mac_buf) - 1);
         mac_buf[sizeof(mac_buf) - 1] = '\0';
 
-        
+
         for (i = 0; mac_buf[i] != '\0'; i++) {
             if (mac_buf[i] == ':') {
-                mac_buf[i] = '_';       
+                mac_buf[i] = '_';
             }
         }
-        
+
         char date_str[32] = {0};
         time_t t = (time_t)target_date;
         struct tm *tm_info = localtime(&t);
         if (tm_info) {
             strftime(date_str, sizeof(date_str), "%Y-%m-%d", tm_info);
         }
-        
-        snprintf(stats_dir, sizeof(stats_dir), "%s/%s/stats/top_apps_%s.json", 
+
+        snprintf(stats_dir, sizeof(stats_dir), "%s/%s/stats/top_apps_%s.json",
                  get_client_data_base_dir(), mac_buf, date_str);
-        
-        
+
+
         struct json_object *file_json = json_object_from_file(stats_dir);
         if (!file_json) {
             json_object_put(data_obj);
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
-        
-        
+
+
         struct json_object *mac_obj = json_object_object_get(file_json, "mac");
         struct json_object *date_obj = json_object_object_get(file_json, "date");
         struct json_object *count_obj = json_object_object_get(file_json, "count");
         struct json_object *apps_obj = json_object_object_get(file_json, "apps");
-        
+
         if (mac_obj) {
             json_object_object_add(data_obj, "mac", mac_obj);
         } else {
             json_object_object_add(data_obj, "mac", json_object_new_string(client->mac));
         }
-        
+
         if (date_obj) {
             json_object_object_add(data_obj, "date", date_obj);
         } else {
             json_object_object_add(data_obj, "date", json_object_new_int64(target_date));
         }
-        
+
         json_object_object_add(data_obj, "is_today", json_object_new_int(0));
-        
+
         if (count_obj) {
             json_object_object_add(data_obj, "count", count_obj);
         } else {
             json_object_object_add(data_obj, "count", json_object_new_int(0));
         }
-        
+
         if (apps_obj) {
             json_object_object_add(data_obj, "apps", apps_obj);
         } else {
             json_object_object_add(data_obj, "apps", json_object_new_array());
         }
-        
-        
+
+
         json_object_put(file_json);
     }
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
@@ -6142,12 +6142,12 @@ struct json_object *fwx_api_delete_record_files(struct json_object *req_obj) {
     struct json_object *start_date_obj = json_object_object_get(req_obj, "start_date");
     struct json_object *end_date_obj = json_object_object_get(req_obj, "end_date");
     struct json_object *type_obj = json_object_object_get(req_obj, "type");
-    
+
     const char *mac = NULL;
     const char *start_date = NULL;
     const char *end_date = NULL;
     const char *delete_type = NULL;
-    
+
     if (mac_obj) {
         mac = json_object_get_string(mac_obj);
     }
@@ -6160,26 +6160,26 @@ struct json_object *fwx_api_delete_record_files(struct json_object *req_obj) {
     if (type_obj) {
         delete_type = json_object_get_string(type_obj);
     }
-    
+
     LOG_DEBUG("Delete record files: mac=%s, start_date=%s, end_date=%s, type=%s\n",
-             mac ? mac : "all", 
+             mac ? mac : "all",
              start_date ? start_date : "none",
              end_date ? end_date : "none",
              delete_type ? delete_type : "all");
-    
-    
+
+
     delete_client_record_files(mac, start_date, end_date, delete_type);
-    
+
     struct json_object *data_obj = json_object_new_object();
     json_object_object_add(data_obj, "message", json_object_new_string("Delete request processed"));
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
 
 typedef struct {
-    int app_type;  
-    unsigned long long total_time;  
+    int app_type;
+    unsigned long long total_time;
 } app_type_stat_sort_t;
 
 
@@ -6198,9 +6198,9 @@ struct json_object *fwx_api_get_global_app_type_stats(struct json_object *req_ob
     struct json_object *type_obj = json_object_object_get(req_obj, "type");
     struct json_object *limit_obj = json_object_object_get(req_obj, "limit");
     int i;
-    const char *stat_type = "daily";  
-    int limit = 10;  
-    
+    const char *stat_type = "daily";
+    int limit = 10;
+
     if (type_obj) {
         stat_type = json_object_get_string(type_obj);
     }
@@ -6209,75 +6209,75 @@ struct json_object *fwx_api_get_global_app_type_stats(struct json_object *req_ob
         if (limit <= 0 || limit > MAX_APP_TYPE)
             limit = MAX_APP_TYPE;
     }
-    
+
     unsigned long long type_time_array[MAX_APP_TYPE] = {0};
-    
-    
+
+
     if (stat_type && strcmp(stat_type, "hourly") == 0) {
         get_global_hourly_app_type_stats(type_time_array);
     } else {
         get_global_daily_app_type_stats(type_time_array);
     }
-    
-    
+
+
     app_type_stat_sort_t stats[MAX_APP_TYPE];
     int valid_count = 0;
-    
+
     for (i = 0; i < MAX_APP_TYPE; i++) {
         if (type_time_array[i] > 0) {
-            stats[valid_count].app_type = i + 1;  
+            stats[valid_count].app_type = i + 1;
             stats[valid_count].total_time = type_time_array[i];
             valid_count++;
         }
     }
-    
-    
+
+
     if (valid_count == 0) {
         for (i = 0; i < 5; i++) {
-            stats[valid_count].app_type = i + 1;  
-            stats[valid_count].total_time = 0;     
+            stats[valid_count].app_type = i + 1;
+            stats[valid_count].total_time = 0;
             valid_count++;
         }
     }
-    
-    
+
+
     if (valid_count > 0) {
         qsort(stats, valid_count, sizeof(app_type_stat_sort_t), compare_app_type_stat_sort);
     }
-    
-    
+
+
     struct json_object *data_obj = json_object_new_object();
     json_object_object_add(data_obj, "type", json_object_new_string(stat_type));
     json_object_object_add(data_obj, "limit", json_object_new_int(limit));
     json_object_object_add(data_obj, "total_count", json_object_new_int(valid_count));
-    
+
     struct json_object *types_array = json_object_new_array();
     int return_count = (valid_count < limit) ? valid_count : limit;
-    
+
     for (i = 0; i < return_count; i++) {
         struct json_object *type_obj = json_object_new_object();
         json_object_object_add(type_obj, "app_type", json_object_new_int(stats[i].app_type));
         json_object_object_add(type_obj, "total_time", json_object_new_int64(stats[i].total_time));
-        
-        
+
+
         int type_index = stats[i].app_type - 1;
         const char *type_name = NULL;
         if (type_index >= 0 && type_index < MAX_APP_TYPE && strlen(CLASS_NAME_TABLE[type_index]) > 0) {
             type_name = CLASS_NAME_TABLE[type_index];
         }
         if (!type_name) {
-            
+
             static char default_name[32] = {0};
             snprintf(default_name, sizeof(default_name), "分类%d", stats[i].app_type);
             type_name = default_name;
         }
         json_object_object_add(type_obj, "name", json_object_new_string(type_name));
-        
+
         json_object_array_add(types_array, type_obj);
     }
-    
+
     json_object_object_add(data_obj, "types", types_array);
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
@@ -6288,71 +6288,71 @@ struct json_object *fwx_api_get_global_traffic_stats(struct json_object *req_obj
     u_int32_t target_date = 0;
     int is_today = 1;
     u_int32_t today = get_today_start_timestamp();
-    
+
     if (date_obj) {
         target_date = (u_int32_t)json_object_get_int64(date_obj);
         is_today = (target_date == today);
     } else {
         target_date = today;
     }
-    
+
     struct json_object *data_obj = json_object_new_object();
-    
+
     if (is_today) {
-        
+
         traffic_stat_t traffic_array[HOURS_PER_DAY];
         get_global_traffic_stats(traffic_array);
-        
+
         json_object_object_add(data_obj, "date", json_object_new_int64(today));
         json_object_object_add(data_obj, "is_today", json_object_new_int(1));
-        
+
         struct json_object *hourly_array = json_object_new_array();
         for (hour = 0; hour < HOURS_PER_DAY; hour++) {
             struct json_object *hour_obj = json_object_new_object();
             json_object_object_add(hour_obj, "hour", json_object_new_int(hour));
-            
+
             struct json_object *traffic_obj = json_object_new_object();
             json_object_object_add(traffic_obj, "up_bytes", json_object_new_int64(traffic_array[hour].up_bytes));
             json_object_object_add(traffic_obj, "down_bytes", json_object_new_int64(traffic_array[hour].down_bytes));
             json_object_object_add(hour_obj, "traffic", traffic_obj);
-            
+
             json_object_array_add(hourly_array, hour_obj);
         }
-        
+
         json_object_object_add(data_obj, "hourly_traffic", hourly_array);
     } else {
-        
+
         char date_str[32] = {0};
         time_t t = (time_t)target_date;
         struct tm *tm_info = localtime(&t);
         if (tm_info) {
             strftime(date_str, sizeof(date_str), "%Y-%m-%d", tm_info);
         }
-        
+
         char file_path[512] = {0};
         snprintf(file_path, sizeof(file_path), "%s/global/stats/traffic_%s.json", get_history_data_root_dir(), date_str);
-        
-        
+
+
         struct json_object *file_json = json_object_from_file(file_path);
         if (!file_json) {
             json_object_put(data_obj);
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
-        
-        
+
+
         json_object_object_add(data_obj, "date", json_object_new_int64(target_date));
         json_object_object_add(data_obj, "is_today", json_object_new_int(0));
-        
+
         struct json_object *hourly_traffic = json_object_object_get(file_json, "hourly_traffic");
         if (hourly_traffic) {
             json_object_object_add(data_obj, "hourly_traffic", hourly_traffic);
         } else {
             json_object_object_add(data_obj, "hourly_traffic", json_object_new_array());
         }
-        
+
         json_object_put(file_json);
     }
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
@@ -6364,14 +6364,14 @@ typedef struct user_traffic_sort {
     char nickname[MAX_NICKNAME_SIZE];
     unsigned long long up_bytes;
     unsigned long long down_bytes;
-    unsigned long long total_bytes;  
+    unsigned long long total_bytes;
 } user_traffic_sort_t;
 
 
 static int compare_user_traffic(const void *a, const void *b) {
     const user_traffic_sort_t *ua = (const user_traffic_sort_t *)a;
     const user_traffic_sort_t *ub = (const user_traffic_sort_t *)b;
-    
+
     if (ua->total_bytes > ub->total_bytes) {
         return -1;
     } else if (ua->total_bytes < ub->total_bytes) {
@@ -6385,106 +6385,106 @@ struct json_object *fwx_api_get_daily_top_users(struct json_object *req_obj) {
 	int i;
 	int hour;
     LOG_DEBUG("fwx_api_get_daily_top_users: called\n");
-    
+
     struct json_object *data_obj = json_object_new_object();
     if (!data_obj) {
         LOG_ERROR("fwx_api_get_daily_top_users: failed to create data_obj\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
-    
+
+
     u_int32_t today = get_today_start_timestamp();
     LOG_DEBUG("fwx_api_get_daily_top_users: today timestamp = %u\n", today);
-    
-    
-    user_traffic_sort_t user_traffic_list[1024];  
+
+
+    user_traffic_sort_t user_traffic_list[1024];
     int user_count = 0;
-    
+
     LOG_DEBUG("fwx_api_get_daily_top_users: start iterating client_list\n");
     client_node_t *node = NULL;
     list_for_each_entry(node, &client_list, client) {
         if (user_count >= 1024) {
             LOG_ERROR("fwx_api_get_daily_top_users: user_count reached max limit 1024\n");
-            break;  
+            break;
         }
-        
-        
+
+
         daily_hourly_stat_t *today_stat = get_today_stat(node);
         if (!today_stat) {
             LOG_DEBUG("fwx_api_get_daily_top_users: client %s has no today_stat, skip\n", node->mac);
             continue;
         }
-        
-        
+
+
         unsigned long long up_bytes = 0;
         unsigned long long down_bytes = 0;
-        
+
         for (hour = 0; hour < HOURS_PER_DAY; hour++) {
             up_bytes += today_stat->hourly_traffic[hour].up_bytes;
             down_bytes += today_stat->hourly_traffic[hour].down_bytes;
         }
-        
-        LOG_DEBUG("fwx_api_get_daily_top_users: client %s, up_bytes=%llu, down_bytes=%llu\n", 
+
+        LOG_DEBUG("fwx_api_get_daily_top_users: client %s, up_bytes=%llu, down_bytes=%llu\n",
                  node->mac, up_bytes, down_bytes);
-        
-        
+
+
         if (up_bytes > 0 || down_bytes > 0) {
             user_traffic_sort_t *user = &user_traffic_list[user_count];
-            
+
             strncpy(user->mac, node->mac, sizeof(user->mac) - 1);
             user->mac[sizeof(user->mac) - 1] = '\0';
-            
+
             strncpy(user->ip, node->ip, sizeof(user->ip) - 1);
             user->ip[sizeof(user->ip) - 1] = '\0';
-            
+
             strncpy(user->hostname, node->hostname, sizeof(user->hostname) - 1);
             user->hostname[sizeof(user->hostname) - 1] = '\0';
-            
+
             strncpy(user->nickname, node->nickname, sizeof(user->nickname) - 1);
             user->nickname[sizeof(user->nickname) - 1] = '\0';
-            
+
             user->up_bytes = up_bytes;
             user->down_bytes = down_bytes;
             user->total_bytes = up_bytes + down_bytes;
-            
-            LOG_DEBUG("fwx_api_get_daily_top_users: added user %s (mac=%s, total_bytes=%llu)\n", 
+
+            LOG_DEBUG("fwx_api_get_daily_top_users: added user %s (mac=%s, total_bytes=%llu)\n",
                      user->nickname[0] ? user->nickname : (user->hostname[0] ? user->hostname : user->mac),
                      user->mac, user->total_bytes);
-            
+
             user_count++;
         }
     }
-    
+
     LOG_DEBUG("fwx_api_get_daily_top_users: total user_count = %d\n", user_count);
-    
-    
+
+
     if (user_count > 0) {
         LOG_DEBUG("fwx_api_get_daily_top_users: sorting %d users\n", user_count);
         qsort(user_traffic_list, user_count, sizeof(user_traffic_sort_t), compare_user_traffic);
     }
-    
-    
+
+
     int return_count = (user_count < 8) ? user_count : 8;
     LOG_DEBUG("fwx_api_get_daily_top_users: return_count = %d\n", return_count);
-    
-    
+
+
     json_object_object_add(data_obj, "date", json_object_new_int64(today));
     json_object_object_add(data_obj, "total_count", json_object_new_int(user_count));
-    
+
     struct json_object *users_array = json_object_new_array();
     if (!users_array) {
         LOG_ERROR("fwx_api_get_daily_top_users: failed to create users_array\n");
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     for (i = 0; i < return_count; i++) {
         struct json_object *user_obj = json_object_new_object();
         if (!user_obj) {
             LOG_ERROR("fwx_api_get_daily_top_users: failed to create user_obj[%d]\n", i);
             continue;
         }
-        
+
         json_object_object_add(user_obj, "mac", json_object_new_string(user_traffic_list[i].mac));
         json_object_object_add(user_obj, "ip", json_object_new_string(user_traffic_list[i].ip));
         json_object_object_add(user_obj, "hostname", json_object_new_string(user_traffic_list[i].hostname));
@@ -6492,15 +6492,15 @@ struct json_object *fwx_api_get_daily_top_users(struct json_object *req_obj) {
         json_object_object_add(user_obj, "up_bytes", json_object_new_int64(user_traffic_list[i].up_bytes));
         json_object_object_add(user_obj, "down_bytes", json_object_new_int64(user_traffic_list[i].down_bytes));
         json_object_object_add(user_obj, "total_bytes", json_object_new_int64(user_traffic_list[i].total_bytes));
-        
+
         json_object_array_add(users_array, user_obj);
-        
-        LOG_DEBUG("fwx_api_get_daily_top_users: added user[%d]: mac=%s, total_bytes=%llu\n", 
+
+        LOG_DEBUG("fwx_api_get_daily_top_users: added user[%d]: mac=%s, total_bytes=%llu\n",
                  i, user_traffic_list[i].mac, user_traffic_list[i].total_bytes);
     }
-    
+
     json_object_object_add(data_obj, "users", users_array);
-    
+
     LOG_DEBUG("fwx_api_get_daily_top_users: success, returning %d users\n", return_count);
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
@@ -6511,61 +6511,61 @@ typedef struct active_user_sort {
     char ip[MAX_IP_LEN];
     char hostname[MAX_HOSTNAME_SIZE];
     char nickname[MAX_NICKNAME_SIZE];
-    unsigned int up_rate;  
-    unsigned int down_rate;  
+    unsigned int up_rate;
+    unsigned int down_rate;
     int rssi;
     unsigned int rx_rate;
     unsigned int tx_rate;
     char band[16];
     char wifi_ifname[64];
     int is_wireless;
-    unsigned long long today_up_bytes;  
-    unsigned long long today_down_bytes;  
-    int visiting_app;  
-    char visiting_url[MAX_REPORT_URL_LEN];  
-    unsigned int total_rate;  
-    int active;  
-    u_int32_t online_duration;  
-    u_int32_t last_update_time;  
+    unsigned long long today_up_bytes;
+    unsigned long long today_down_bytes;
+    int visiting_app;
+    char visiting_url[MAX_REPORT_URL_LEN];
+    unsigned int total_rate;
+    int active;
+    u_int32_t online_duration;
+    u_int32_t last_update_time;
 } active_user_sort_t;
 
 
 static int compare_active_users(const void *a, const void *b) {
     const active_user_sort_t *user_a = (const active_user_sort_t *)a;
     const active_user_sort_t *user_b = (const active_user_sort_t *)b;
-    
-    
+
+
     if (user_b->total_rate > user_a->total_rate)
         return 1;
     else if (user_b->total_rate < user_a->total_rate)
         return -1;
-    
-    
+
+
     if (user_b->active > user_a->active)
         return 1;
     else if (user_b->active < user_a->active)
         return -1;
-    
-    
+
+
     int user_a_visiting = (user_a->visiting_app > 0 || (user_a->visiting_url && strlen(user_a->visiting_url) > 0)) ? 1 : 0;
     int user_b_visiting = (user_b->visiting_app > 0 || (user_b->visiting_url && strlen(user_b->visiting_url) > 0)) ? 1 : 0;
     if (user_b_visiting > user_a_visiting)
         return 1;
     else if (user_b_visiting < user_a_visiting)
         return -1;
-    
-    
+
+
     if (user_b->online_duration > user_a->online_duration)
         return 1;
     else if (user_b->online_duration < user_a->online_duration)
         return -1;
-    
-    
+
+
     if (user_b->last_update_time > user_a->last_update_time)
         return 1;
     else if (user_b->last_update_time < user_a->last_update_time)
         return -1;
-    
+
     return 0;
 }
 
@@ -6578,58 +6578,58 @@ struct json_object *fwx_api_get_active_users(struct json_object *req_obj) {
         LOG_ERROR("fwx_api_get_active_users: failed to create data_obj\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
-    
+
+
     int count = 10;
     if (req_obj) {
         struct json_object *count_obj = json_object_object_get(req_obj, "count");
         if (count_obj) {
             count = json_object_get_int(count_obj);
             if (count <= 0 || count > 100) {
-                count = 10;  
+                count = 10;
             }
         }
     }
-    
+
     LOG_DEBUG("fwx_api_get_active_users: start, count=%d\n", count);
-    
-    
+
+
     update_client_nickname();
     update_client_visiting_info();
-    
-    active_user_sort_t active_user_list[1024];  
+
+    active_user_sort_t active_user_list[1024];
     int user_count = 0;
-    
+
     client_node_t *node = NULL;
     list_for_each_entry(node, &client_list, client) {
         if (user_count >= 1024) {
             LOG_ERROR("fwx_api_get_active_users: user_count reached max limit 1024\n");
             break;
         }
-        
-        
+
+
         if (!node->online) {
             continue;
         }
         LOG_DEBUG("mac = %s, online = %d\n", node->mac, node->online);
-        
-        
+
+
         unsigned int total_rate = node->up_rate + node->down_rate;
 
         active_user_sort_t *user = &active_user_list[user_count];
-        
+
         strncpy(user->mac, node->mac, sizeof(user->mac) - 1);
         user->mac[sizeof(user->mac) - 1] = '\0';
-        
+
         strncpy(user->ip, node->ip, sizeof(user->ip) - 1);
         user->ip[sizeof(user->ip) - 1] = '\0';
-        
+
         strncpy(user->hostname, node->hostname, sizeof(user->hostname) - 1);
         user->hostname[sizeof(user->hostname) - 1] = '\0';
-        
+
         strncpy(user->nickname, node->nickname, sizeof(user->nickname) - 1);
         user->nickname[sizeof(user->nickname) - 1] = '\0';
-        
+
         user->up_rate = node->up_rate;
         user->down_rate = node->down_rate;
         user->rssi = node->rssi;
@@ -6639,71 +6639,71 @@ struct json_object *fwx_api_get_active_users(struct json_object *req_obj) {
         snprintf(user->wifi_ifname, sizeof(user->wifi_ifname), "%s", node->wifi_ifname);
         user->is_wireless = node->is_wireless;
         user->total_rate = total_rate;
-        user->active = node->active;  
+        user->active = node->active;
         user->visiting_app = node->visiting_app;
-        
+
         strncpy(user->visiting_url, node->visiting_url, sizeof(user->visiting_url) - 1);
         user->visiting_url[sizeof(user->visiting_url) - 1] = '\0';
-        
-        
+
+
         u_int32_t current_time = get_timestamp();
         if (node->online_time > 0) {
-            user->online_duration = current_time - node->online_time;  
-            user->last_update_time = node->online_time;  
+            user->online_duration = current_time - node->online_time;
+            user->last_update_time = node->online_time;
         } else {
             user->online_duration = 0;
             user->last_update_time = 0;
         }
-        
-        
+
+
         daily_hourly_stat_t *today_stat = get_today_stat(node);
         unsigned long long today_up_bytes = 0;
         unsigned long long today_down_bytes = 0;
-        
+
         if (today_stat) {
             for (hour = 0; hour < HOURS_PER_DAY; hour++) {
                 today_up_bytes += today_stat->hourly_traffic[hour].up_bytes;
                 today_down_bytes += today_stat->hourly_traffic[hour].down_bytes;
             }
         }
-        
+
         user->today_up_bytes = today_up_bytes;
         user->today_down_bytes = today_down_bytes;
-        
+
         user_count++;
-        
-        LOG_DEBUG("fwx_api_get_active_users: added user: mac=%s, total_rate=%u\n", 
+
+        LOG_DEBUG("fwx_api_get_active_users: added user: mac=%s, total_rate=%u\n",
                     user->mac, user->total_rate);
-        
+
     }
-    
-    
+
+
     if (user_count > 0) {
         LOG_DEBUG("fwx_api_get_active_users: sorting %d users\n", user_count);
         qsort(active_user_list, user_count, sizeof(active_user_sort_t), compare_active_users);
     }
-    
-    
+
+
     int return_count = (user_count < count) ? user_count : count;
     LOG_DEBUG("fwx_api_get_active_users: return_count = %d\n", return_count);
-    
-    
+
+
     json_object_object_add(data_obj, "total_count", json_object_new_int(user_count));
-    
+
     struct json_object *users_array = json_object_new_array();
     if (!users_array) {
         LOG_ERROR("fwx_api_get_active_users: failed to create users_array\n");
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     for (i = 0; i < return_count; i++) {
         struct json_object *user_obj = json_object_new_object();
         if (!user_obj) {
             LOG_ERROR("fwx_api_get_active_users: failed to create user_obj[%d]\n", i);
             continue;
         }
-        
+
         json_object_object_add(user_obj, "mac", json_object_new_string(active_user_list[i].mac));
         json_object_object_add(user_obj, "ip", json_object_new_string(active_user_list[i].ip));
         json_object_object_add(user_obj, "hostname", json_object_new_string(active_user_list[i].hostname));
@@ -6719,29 +6719,29 @@ struct json_object *fwx_api_get_active_users(struct json_object *req_obj) {
         json_object_object_add(user_obj, "terminal_type", json_object_new_string(active_user_list[i].is_wireless ? "wireless" : "wired"));
         json_object_object_add(user_obj, "today_up_bytes", json_object_new_int64(active_user_list[i].today_up_bytes));
         json_object_object_add(user_obj, "today_down_bytes", json_object_new_int64(active_user_list[i].today_down_bytes));
-        
-        
+
+
         if (active_user_list[i].visiting_app > 0) {
             json_object_object_add(user_obj, "app", json_object_new_string(get_app_name_by_id(active_user_list[i].visiting_app)));
         } else {
             json_object_object_add(user_obj, "app", json_object_new_string(""));
         }
-        
+
         if (strlen(active_user_list[i].visiting_url) > 0) {
             json_object_object_add(user_obj, "url", json_object_new_string(active_user_list[i].visiting_url));
         } else {
             json_object_object_add(user_obj, "url", json_object_new_string(""));
         }
-        
+
         json_object_array_add(users_array, user_obj);
-        
-        LOG_DEBUG("fwx_api_get_active_users: added user[%d]: mac=%s, total_rate=%u\n", 
+
+        LOG_DEBUG("fwx_api_get_active_users: added user[%d]: mac=%s, total_rate=%u\n",
                  i, active_user_list[i].mac, active_user_list[i].total_rate);
     }
-    
+
     json_object_object_add(data_obj, "users", users_array);
     LOG_DEBUG("data_obj: %s\n", json_object_to_json_string(data_obj));
-    
+
     LOG_DEBUG("fwx_api_get_active_users: success, returning %d users\n", return_count);
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
@@ -6753,28 +6753,28 @@ struct json_object *fwx_api_get_user_basic_info(struct json_object *req_obj) {
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
 
     struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
     if (!mac_obj) {
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *target_mac = json_object_get_string(mac_obj);
     if (!target_mac) {
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     update_client_nickname();
     update_client_visiting_info();
-    
+
     extern struct list_head client_list;
     client_node_t *client = NULL;
     u_int32_t cur_time = get_timestamp();
     u_int32_t today_start = get_today_start_timestamp();
-    
+
 
     list_for_each_entry(client, &client_list, client) {
         if (strcmp(client->mac, target_mac) == 0) {
@@ -6797,14 +6797,14 @@ struct json_object *fwx_api_get_user_basic_info(struct json_object *req_obj) {
             json_object_object_add(data_obj, "wifi_ifname", json_object_new_string(client->wifi_ifname));
             json_object_object_add(data_obj, "is_wireless", json_object_new_int(client->is_wireless));
             json_object_object_add(data_obj, "terminal_type", json_object_new_string(client->is_wireless ? "wireless" : "wired"));
-            
+
 
             daily_hourly_stat_t *today_stat = get_today_stat(client);
             unsigned long long today_up_bytes = 0;
             unsigned long long today_down_bytes = 0;
             unsigned long long today_online_time = 0;
             unsigned long long today_active_time = 0;
-            
+
             if (today_stat) {
                 for (hour = 0; hour < HOURS_PER_DAY; hour++) {
                     today_up_bytes += today_stat->hourly_traffic[hour].up_bytes;
@@ -6813,17 +6813,17 @@ struct json_object *fwx_api_get_user_basic_info(struct json_object *req_obj) {
                     today_active_time += today_stat->hourly_active_time[hour];
                 }
             }
-            
+
             json_object_object_add(data_obj, "today_up_bytes", json_object_new_int64(today_up_bytes));
             json_object_object_add(data_obj, "today_down_bytes", json_object_new_int64(today_down_bytes));
             json_object_object_add(data_obj, "today_online_time", json_object_new_int64(today_online_time));
             json_object_object_add(data_obj, "today_active_time", json_object_new_int64(today_active_time));
-            
+
 
             return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
         }
     }
-    
+
 
     json_object_put(data_obj);
     return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
@@ -6832,27 +6832,27 @@ struct json_object *fwx_api_get_user_basic_info(struct json_object *req_obj) {
 
 struct json_object *fwx_api_get_online_offline_records(struct json_object *req_obj) {
     struct json_object *data_obj = json_object_new_object();
-    
+
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
-    
+
+
     struct json_object *mac_obj = NULL;
     if (!json_object_object_get_ex(req_obj, "mac", &mac_obj) || !mac_obj) {
         LOG_ERROR("fwx_api_get_online_offline_records: missing mac parameter\n");
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *mac = json_object_get_string(mac_obj);
     if (!mac || strlen(mac) == 0) {
         LOG_ERROR("fwx_api_get_online_offline_records: invalid mac parameter\n");
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
-    
+
+
     extern struct list_head client_list;
     client_node_t *client = find_client_node(mac);
     if (!client) {
@@ -6860,16 +6860,16 @@ struct json_object *fwx_api_get_online_offline_records(struct json_object *req_o
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
-    
+
+
     struct json_object *records_array = json_object_new_array();
     if (!records_array) {
         LOG_ERROR("fwx_api_get_online_offline_records: failed to create records_array\n");
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
-    
+
+
     online_offline_record_t *record = NULL;
     int record_count = 0;
     list_for_each_entry(record, &client->online_offline_records, record) {
@@ -6878,12 +6878,12 @@ struct json_object *fwx_api_get_online_offline_records(struct json_object *req_o
             LOG_ERROR("fwx_api_get_online_offline_records: failed to create record_obj\n");
             continue;
         }
-        
+
         json_object_object_add(record_obj, "type", json_object_new_int(record->type));
         json_object_object_add(record_obj, "timestamp", json_object_new_int64(record->timestamp));
         json_object_object_add(record_obj, "duration", json_object_new_int64(record->duration));
-        
-        
+
+
         char time_str[64] = {0};
         time_t t = (time_t)record->timestamp;
         struct tm *tm_info = localtime(&t);
@@ -6891,8 +6891,8 @@ struct json_object *fwx_api_get_online_offline_records(struct json_object *req_o
             strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
         }
         json_object_object_add(record_obj, "time_str", json_object_new_string(time_str));
-        
-        
+
+
         char duration_str[64] = {0};
         unsigned long long hours = record->duration / 3600;
         unsigned long long minutes = (record->duration % 3600) / 60;
@@ -6905,15 +6905,15 @@ struct json_object *fwx_api_get_online_offline_records(struct json_object *req_o
             snprintf(duration_str, sizeof(duration_str), "%llus", seconds);
         }
         json_object_object_add(record_obj, "duration_str", json_object_new_string(duration_str));
-        
+
         json_object_array_add(records_array, record_obj);
         record_count++;
     }
-    
+
     json_object_object_add(data_obj, "mac", json_object_new_string(mac));
     json_object_object_add(data_obj, "records", records_array);
     json_object_object_add(data_obj, "count", json_object_new_int(record_count));
-    
+
     LOG_DEBUG("fwx_api_get_online_offline_records: success, returning %d records for mac=%s\n", record_count, mac);
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
@@ -7059,7 +7059,7 @@ struct json_object *fwx_api_get_record_base(struct json_object *req_obj) {
     int enable = fwx_uci_get_int_value(ctx, "fwx.record.enable");
     int record_time = fwx_uci_get_int_value(ctx, "fwx.record.record_time");
     int app_valid_time = fwx_uci_get_int_value(ctx, "fwx.record.app_valid_time");
-    
+
     char history_data_size[64] = {0};
     char history_data_path[256] = {0};
     char base_data_path[256] = {0};
@@ -7233,13 +7233,13 @@ struct json_object *fwx_api_set_record_base(struct json_object *req_obj) {
     fwx_uci_set_value(ctx, "fwx.record.record_time", buf);
     snprintf(buf, sizeof(buf), "%d", app_valid_time);
     fwx_uci_set_value(ctx, "fwx.record.app_valid_time", buf);
-    
+
     if (history_data_size && strlen(history_data_size) > 0) {
         fwx_uci_set_value(ctx, "fwx.record.history_data_size", (char *)history_data_size);
     } else {
         fwx_uci_delete(ctx, "fwx.record.history_data_size");
     }
-    
+
     char old_history_path[256] = {0};
     char old_base_path[256] = {0};
     char old_terminal_path[256] = {0};
@@ -7253,13 +7253,13 @@ struct json_object *fwx_api_set_record_base(struct json_object *req_obj) {
             strncpy(old_base_path, old_history_path, sizeof(old_base_path) - 1);
         }
     }
-    
+
     fwx_uci_set_value(ctx, "fwx.record.history_data_path", (char *)history_data_path);
     fwx_uci_set_value(ctx, "fwx.record.base_data_path", (char *)base_data_path);
     fwx_uci_delete(ctx, "fwx.record.terminal_data_path");
 
     fwx_uci_commit(ctx, "fwx");
-    
+
     if ((history_data_path && strlen(history_data_path) > 0) ||
         (base_data_path && strlen(base_data_path) > 0)) {
         if (strlen(old_base_path) > 0 && strcmp(old_base_path, base_data_path) != 0) {
@@ -7310,11 +7310,11 @@ struct json_object *fwx_api_set_record_base(struct json_object *req_obj) {
 
         reset_client_data_base_dir_cache();
     }
-    
+
     uci_free_context(ctx);
 
     update_fwx_proc_u32_value("record_enable", enable);
-    
+
 
     load_app_valid_time_config();
 
@@ -7372,23 +7372,23 @@ struct json_object *fwx_api_record_action(struct json_object *req_obj) {
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct json_object *action_obj = json_object_object_get(req_obj, "action");
     if (!action_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *action = json_object_get_string(action_obj);
     if (!action) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     if (strcmp(action, "clean_all_data") == 0) {
         struct uci_context *ctx = uci_alloc_context();
         if (!ctx) {
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
-        
+
         char history_data_path[256] = {0};
         char base_data_path[256] = {0};
         char terminal_data_path[256] = {0};
@@ -7403,7 +7403,7 @@ struct json_object *fwx_api_record_action(struct json_object *req_obj) {
             }
         }
         uci_free_context(ctx);
-        
+
         char terminal_root_dir[512] = {0};
         char history_root_dir[512] = {0};
         char base_data_dir[512] = {0};
@@ -7445,12 +7445,12 @@ struct json_object *fwx_api_record_action(struct json_object *req_obj) {
         if (access(history_visit_db_path, F_OK) == 0) {
             clear_visit_db_tables(history_visit_db_path);
         }
-        
+
         reset_client_data_base_dir_cache();
-        
+
         return fwx_gen_api_response_data(API_CODE_SUCCESS, NULL);
     }
-    
+
     return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
 }
 
@@ -7507,50 +7507,50 @@ struct json_object *fwx_api_add_mock_visit_records(struct json_object *req_obj) 
 
 struct json_object *fwx_api_get_device_list(struct json_object *req_obj) {
     LOG_DEBUG("fwx_api_get_device_list: called\n");
-    
+
     struct json_object *data_obj = json_object_new_object();
     struct json_object *device_array = json_object_new_array();
-    
+
     FILE *fp = fopen("/proc/net/dev", "r");
     if (!fp) {
         LOG_ERROR("Failed to open /proc/net/dev\n");
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     char line[256];
     int line_num = 0;
-    
+
 
     while (fgets(line, sizeof(line), fp)) {
         line_num++;
-        
+
 
         if (line_num <= 2) {
             continue;
         }
-        
+
 
         char *colon = strchr(line, ':');
         if (!colon) {
             continue;
         }
-        
- 
+
+
         int ifname_len = colon - line;
         if (ifname_len <= 0 || ifname_len >= 64) {
             continue;
         }
-        
+
         char ifname[64] = {0};
         strncpy(ifname, line, ifname_len);
-        
+
 
         char *ifname_start = ifname;
         while (*ifname_start == ' ' || *ifname_start == '\t') {
             ifname_start++;
         }
-    
+
         if (strcmp(ifname_start, "lo") == 0) {
             continue;
         }
@@ -7562,9 +7562,9 @@ struct json_object *fwx_api_get_device_list(struct json_object *req_obj) {
         json_object_array_add(device_array, json_object_new_string(ifname_start));
         LOG_DEBUG("Added interface: %s\n", ifname_start);
     }
-    
+
     fclose(fp);
-    
+
     json_object_object_add(data_obj, "device_list", device_array);
     LOG_DEBUG("fwx_api_get_device_list: returning %d devices\n", json_object_array_length(device_array));
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
@@ -7573,24 +7573,24 @@ struct json_object *fwx_api_get_device_list(struct json_object *req_obj) {
 
 struct json_object *fwx_api_get_dashboard_param(struct json_object *req_obj) {
     LOG_DEBUG("fwx_api_get_dashboard_param: called\n");
-    
+
     struct uci_context *uci_ctx = uci_alloc_context();
     if (!uci_ctx) {
         LOG_ERROR("Failed to allocate UCI context\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     char monitor_device[64] = {0};
     int ret = fwx_uci_get_value(uci_ctx, "fwx.dashboard.monitor_device", monitor_device, sizeof(monitor_device));
     if (ret != 0) {
         monitor_device[0] = '\0';
     }
-    
+
     uci_free_context(uci_ctx);
-    
+
     struct json_object *data_obj = json_object_new_object();
     json_object_object_add(data_obj, "monitor_device", json_object_new_string(monitor_device));
-    
+
     LOG_DEBUG("fwx_api_get_dashboard_param: monitor_device=%s\n", monitor_device);
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
@@ -7626,33 +7626,33 @@ struct json_object *fwx_api_set_init_status(struct json_object *req_obj) {
 }
 
 struct json_object *fwx_api_set_dashboard_param(struct json_object *req_obj) {
-    
+
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct json_object *monitor_device_obj = json_object_object_get(req_obj, "monitor_device");
     if (!monitor_device_obj) {
         LOG_ERROR("monitor_device parameter missing\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *monitor_device = json_object_get_string(monitor_device_obj);
-    
+
     struct uci_context *uci_ctx = uci_alloc_context();
     if (!uci_ctx) {
         LOG_ERROR("Failed to allocate UCI context\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     if (monitor_device && strlen(monitor_device) > 0) {
         fwx_uci_set_value(uci_ctx, "fwx.dashboard.monitor_device", (char *)monitor_device);
         fwx_uci_commit(uci_ctx, "fwx");
         g_interface_name[0] = '\0';
     }
-    
+
     uci_free_context(uci_ctx);
-    
+
     LOG_DEBUG("fwx_api_set_dashboard_param: set monitor_device=%s\n", monitor_device ? monitor_device : "(empty)");
     return fwx_gen_api_response_data(API_CODE_SUCCESS, NULL);
 }
@@ -7667,7 +7667,7 @@ typedef enum {
 typedef struct fwx_api_node{
     char *api_name;
     fwx_api_handler handler;
-    int forward;      
+    int forward;
     fwx_api_method_t method;
 }fwx_api_node_t;
 
@@ -7683,9 +7683,9 @@ static void fwx_forward_to_agent(struct json_object *req_obj) {
 	if (!cmd_buf)
 		return;
     snprintf(cmd_buf, buf_len, "ubus -t 2 call fwx_agent forward '%s'", req_str);
-	
+
 	LOG_WARN("forward cmd buf = %s\n", cmd_buf);
-  	system(cmd_buf);
+	system(cmd_buf);
 	free(cmd_buf);
 }
 
@@ -7819,13 +7819,13 @@ static fwx_api_node_t fwx_api_node_list[] = {
     {NULL, NULL, 0, FWX_API_METHOD_GET}
 };
 
-int ubus_handle_common(struct ubus_context *ctx, struct ubus_object *obj, struct ubus_request_data *req, 
+int ubus_handle_common(struct ubus_context *ctx, struct ubus_object *obj, struct ubus_request_data *req,
                         const char *method, struct blob_attr *msg) {
     int i = 0;
     fwx_api_node_t *api_node = NULL;
     LOG_DEBUG("method: %s\n", method);
     char *msg_obj_str = blobmsg_format_json(msg, true);
-    if (!msg_obj_str) 
+    if (!msg_obj_str)
         return 0;
     LOG_INFO("msg_obj_str: %s\n", msg_obj_str);
     struct json_object *req_obj = json_tokener_parse(msg_obj_str);
@@ -7849,7 +7849,7 @@ int ubus_handle_common(struct ubus_context *ctx, struct ubus_object *obj, struct
         free(msg_obj_str);
         return 0;
     }
-    
+
 
     struct json_object *data_obj = json_object_object_get(req_obj, "data");
     if (!data_obj) {
@@ -7890,7 +7890,7 @@ int ubus_handle_common(struct ubus_context *ctx, struct ubus_object *obj, struct
         response_obj = fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         ubus_response_json(ctx, req, response_obj);
     }
-    
+
     if (response_obj) {
         json_object_put(response_obj);
     }
@@ -7904,7 +7904,7 @@ static const struct blobmsg_policy def_policy[1] = {
 };
 
 
-int ubus_handle_common(struct ubus_context *ctx, struct ubus_object *obj, struct ubus_request_data *req, 
+int ubus_handle_common(struct ubus_context *ctx, struct ubus_object *obj, struct ubus_request_data *req,
                         const char *method, struct blob_attr *msg);
 
 static struct ubus_method fwx_object_methods[] = {

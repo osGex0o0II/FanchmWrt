@@ -23,39 +23,39 @@ return baseclass.extend({
 		ui.menu.load().then(L.bind(this.render, this));
 		window.addEventListener('resize', L.bind(this.handleResize, this));
 	},
-	
+
 	isMobileDevice() {
 		const userAgent = navigator.userAgent || navigator.vendor || window.opera;
 		const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
 		const isMobileUA = mobileRegex.test(userAgent);
-		
+
 		const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
 		const isMobileWidth = width <= 768;
-		
+
 		const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-		
+
 		const isHighDPR = window.devicePixelRatio && window.devicePixelRatio > 1;
 
 		const isMobile = isMobileUA && isMobileWidth;
-		
+
 		const isMobileLandscape = isMobileUA && width > 768 && width <= 1024;
-		
+
 		const result = isMobile || isMobileLandscape;
-		
+
 
 		return result;
 	},
-	
+
 	isWideScreen() {
 		return !this.isMobileDevice();
 	},
-	
+
 	handleResize() {
 		clearTimeout(this.resizeTimer);
 		this.resizeTimer = setTimeout(() => {
 			const isWide = this.isWideScreen();
 			const sidebarNav = document.querySelector('.sidebar-nav');
-			
+
 			if (isWide) {
 				if (sidebarNav) {
 					sidebarNav.style.display = '';
@@ -81,7 +81,7 @@ return baseclass.extend({
 		let node = tree;
 		let url = '';
 		this.renderModeMenu(tree);
-		this.renderCategoryNav(); 
+		this.renderCategoryNav();
 		this.renderBreadcrumb(tree);
 
 		let currentLevel = 0;
@@ -108,7 +108,7 @@ return baseclass.extend({
 				this.renderMobileMenu(node, url, currentLevel);
 			}
 		}
-		
+
 		setTimeout(() => {
 			this.handleResize();
 		}, 100);
@@ -116,9 +116,9 @@ return baseclass.extend({
 
 	renderCategoryNav() {
 		const savedCategory = localStorage.getItem('luci-menu-category') || 'basic';
-		
+
 		const isWide = this.isWideScreen();
-		
+
 		if (isWide) {
 			const titleText = (
 				(L && L.env && L.env.hostname) ||
@@ -131,7 +131,7 @@ return baseclass.extend({
 			brandElement.addEventListener('click', function() {
 				localStorage.setItem('luci-menu-category', 'basic');
 			});
-			
+
 			const createModeItem = (category, title, href) => {
 				const item = E('li', {
 					'class': 'mode-item' + (savedCategory === category ? ' active' : ''),
@@ -247,13 +247,13 @@ return baseclass.extend({
 		} else {
 			body.appendChild(topNavbar);
 		}
-		
+
 		setTimeout(() => {
 			this.switchCategory(savedCategory);
 		}, 100);
 		}
 	},
-	
+
 
 	renderBreadcrumb(tree) {
 		if (L.env.dispatchpath && L.env.dispatchpath.length >= 2 &&
@@ -272,10 +272,10 @@ return baseclass.extend({
 		for (let i = 0; i < L.env.dispatchpath.length && currentNode; i++) {
 			const pathSegment = L.env.dispatchpath[i];
 			currentPath += (currentPath ? '/' : '') + pathSegment;
-			
+
 			if (currentNode.children && currentNode.children[pathSegment]) {
 				currentNode = currentNode.children[pathSegment];
-				
+
 				if (i === 0 && pathSegment === 'admin') {
 					const homeItem = E('li', { 'class': 'home-item' }, [
 						E('a', { 'href': '/cgi-bin/luci/admin/fwx_dashboard', 'title': _('Home') }, [
@@ -287,7 +287,7 @@ return baseclass.extend({
 					const breadcrumbItem = E('li', {}, [
 						E('span', {}, [_(currentNode.title)])
 					]);
-					
+
 					breadcrumbItems.push(breadcrumbItem);
 				}
 			}
@@ -307,18 +307,18 @@ return baseclass.extend({
 			if (existingBreadcrumb) {
 				existingBreadcrumb.remove();
 			}
-			
+
 			mainContent.insertBefore(breadcrumbContainer, mainContent.firstChild);
 		}
 	},
 
 	switchCategory(category) {
-		
+
 		const isWide = this.isWideScreen();
 		if (!isWide) {
 			return;
 		}
-		
+
 		const navTabs = document.querySelector('.top-navbar .nav-tabs');
 		if (navTabs) {
 			const tabs = navTabs.querySelectorAll('li');
@@ -338,7 +338,7 @@ return baseclass.extend({
 		});
 
 		const menuContainer = document.querySelector('#topmenu');
-		
+
 		if (menuContainer) {
 			const menuItems = Array.from(menuContainer.children).filter(child => child.tagName === 'LI');
 			menuItems.forEach(li => {
@@ -357,16 +357,16 @@ return baseclass.extend({
 			}
 		});
 		}
-		
+
 		this.currentCategory = category;
 		localStorage.setItem('luci-menu-category', category);
 	},
 
 	isAlreadyRendered(tree, level, parentName) {
 
-		
+
 		const treeName = tree.name;
-		
+
 
 		if (level === 1 && parentName) {
 			const existingSubmenus = document.querySelectorAll('#topmenu .dropdown-menu a');
@@ -378,7 +378,7 @@ return baseclass.extend({
 					if (pathMatch) {
 						const existingParentMenu = pathMatch[1];
 						const existingChildMenu = pathMatch[2];
-		
+
 						if (existingParentMenu === parentName && existingChildMenu === treeName) {
 							return true;
 						}
@@ -400,7 +400,7 @@ return baseclass.extend({
 				return true;
 			}
 		}
-		
+
 		return false;
 	},
 
@@ -416,7 +416,7 @@ return baseclass.extend({
 
 	renderTabMenu(tree, url, level) {
 		level = level || 0;
-		
+
 		const container = document.querySelector('#tabmenu');
 		const ul = E('ul', { 'class': 'tabs' });
 		const children = ui.menu.getChildren(tree);
@@ -451,7 +451,7 @@ return baseclass.extend({
 
 		const isWide = this.isWideScreen();
 		let ul;
-		
+
 		if (level === 0) {
 			if (isWide) {
 				ul = document.querySelector('#topmenu');
@@ -477,7 +477,7 @@ return baseclass.extend({
 		} else {
 			ul = E('ul', { 'class': 'dropdown-menu' });
 		}
-		
+
 		const children = ui.menu.getChildren(tree);
 
 		if (children.length == 0 || level > 1)
@@ -504,7 +504,7 @@ return baseclass.extend({
 
 			const iconClass = level === 0 ? this.generateMenuIconClass(child.name) : '';
 			const finalLinkClass = linkclass + (iconClass ? ' ' + iconClass : '');
-			
+
 			const li = E('li', { 'class': fullClass }, [
 				E('a', { 'class': finalLinkClass, 'href': linkurl }, [_(child.title)]),
 				submenu
@@ -516,7 +516,7 @@ return baseclass.extend({
 					li.classList.add('open');
 				}
 			}
-			
+
 			if (level === 0 && !submenu.firstElementChild) {
 				const isActive = ((L.env.dispatchpath[1] == child.name) && (L.env.dispatchpath[0] == tree.name));
 				if (isActive) {
@@ -528,12 +528,12 @@ return baseclass.extend({
 				}
 			}
 
-		
+
 			if (level === 1) {
 				const isActive = ((L.env.dispatchpath[2] == child.name) && (L.env.dispatchpath[1] == tree.name));
 				if (isActive) {
 					li.classList.add('active');
-		
+
 				}
 			}
 
@@ -545,19 +545,19 @@ return baseclass.extend({
 					e.stopPropagation();
 					const dropdown = li;
 					const isOpen = dropdown.classList.contains('open');
-										
-	
+
+
 					const menuSelector = isWide ? '#topmenu' : '#topmenu-mobile';
 					document.querySelectorAll(menuSelector + ' .dropdown.open').forEach(item => {
 						if (item !== dropdown) {
 							item.classList.remove('open');
 						}
 					});
-					
+
 
 					if (isOpen) {
 						dropdown.classList.remove('open');
-	
+
 					} else {
 						dropdown.classList.add('open');
 					}
@@ -570,14 +570,14 @@ return baseclass.extend({
 				if (submenuLink) {
 					submenuLink.addEventListener('click', function(e) {
 						e.stopPropagation();
-	
+
 						if (!this.isWideScreen()) {
 							this.hideMobileMenu();
 						}
 					}.bind(this));
 				}
 			}
-			
+
 
 			if (level === 0 && !submenu.firstElementChild) {
 				const menuLink = li.querySelector('a');
@@ -601,11 +601,11 @@ return baseclass.extend({
 
 	renderMobileMenu(tree, url, level) {
 		level = level || 0;
-		
+
 		let ul;
-		
+
 		if (level === 0) {
-	
+
 			ul = document.querySelector('#topmenu-mobile');
 			if (!ul) {
 
@@ -616,12 +616,12 @@ return baseclass.extend({
 
 			ul = E('ul', { 'class': 'dropdown-menu' });
 		}
-		
+
 		const children = ui.menu.getChildren(tree);
 
 		if (children.length == 0 || level > 1)
 			return E([]);
-		
+
 
 		const parentName = (level === 1) ? tree.name : null;
 		if (this.isAlreadyRendered(tree, level, parentName)) {
@@ -638,10 +638,10 @@ return baseclass.extend({
 
 			const fullClass = subclass;
 
-		
+
 			const iconClass = level === 0 ? this.generateMenuIconClass(child.name) : '';
 			const finalLinkClass = linkclass + (iconClass ? ' ' + iconClass : '');
-			
+
 			const li = E('li', { 'class': fullClass }, [
 				E('a', { 'class': finalLinkClass, 'href': linkurl }, [_(child.title)]),
 				submenu
@@ -654,7 +654,7 @@ return baseclass.extend({
 					li.classList.add('open');
 				}
 			}
-			
+
 			if (level === 0 && !submenu.firstElementChild) {
 				const isActive = ((L.env.dispatchpath[1] == child.name) && (L.env.dispatchpath[0] == tree.name));
 				if (isActive) {
@@ -666,7 +666,7 @@ return baseclass.extend({
 				}
 			}
 
-	
+
 			if (level === 1) {
 				const isActive = ((L.env.dispatchpath[2] == child.name) && (L.env.dispatchpath[1] == tree.name));
 				if (isActive) {
@@ -681,7 +681,7 @@ return baseclass.extend({
 					e.stopPropagation();
 					const dropdown = li;
 					const isOpen = dropdown.classList.contains('open');
-					
+
 
 					document.querySelectorAll('#topmenu-mobile .dropdown.open').forEach(item => {
 						if (item !== dropdown) {
@@ -752,12 +752,12 @@ return baseclass.extend({
 	autoExpandActiveMenu() {
 		const currentPath = L.env.requestpath.join('/');
 		const menuItems = document.querySelectorAll('#topmenu .dropdown');
-		
+
 		menuItems.forEach(menuItem => {
 			const menuLink = menuItem.querySelector('a.menu');
 			const menuText = menuLink.textContent.trim();
-			
-			if (currentPath.includes(menuText.toLowerCase()) || 
+
+			if (currentPath.includes(menuText.toLowerCase()) ||
 				this.isCurrentMenuActive(menuItem, currentPath)) {
 				menuItem.classList.add('open');
 			}

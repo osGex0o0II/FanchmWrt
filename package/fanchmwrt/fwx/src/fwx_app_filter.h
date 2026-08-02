@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #ifndef __FWX_APP_FILTER_H__
 #define __FWX_APP_FILTER_H__
@@ -23,18 +23,18 @@ typedef struct app_id_node {
 
 
 typedef struct app_id_config {
-    struct hlist_head hash_table[APPID_HASH_SIZE]; 
+    struct hlist_head hash_table[APPID_HASH_SIZE];
     int count;
 } app_id_config_t;
 
 
 typedef struct app_filter_rule {
-    int rule_id;                
-    int enable;                 
+    int rule_id;
+    int enable;
     int filter_quic;
-    mac_config_t mac_list;      
-    app_id_config_t app_id_list; 
-    struct list_head list;  
+    mac_config_t mac_list;
+    app_id_config_t app_id_list;
+    struct list_head list;
 } app_filter_rule_t;
 
 extern int g_appfilter_enable;
@@ -86,4 +86,3 @@ int fwx_api_flush_app_filter_whitelist(cJSON *data_obj);
 int fwx_match_app_filter_whitelist(const unsigned char *mac);
 
 #endif
-

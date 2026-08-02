@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #ifndef __FWX_MAC_H__
 #define __FWX_MAC_H__
@@ -9,8 +9,8 @@
 #define ETH_ALEN 6
 #endif
 struct mac_node {
-    unsigned char mac[ETH_ALEN];  
-    struct hlist_node hlist;  
+    unsigned char mac[ETH_ALEN];
+    struct hlist_node hlist;
 };
 
 typedef struct mac_config{

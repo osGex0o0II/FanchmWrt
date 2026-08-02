@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <linux/init.h>
 #include <linux/module.h>
@@ -68,7 +68,7 @@ int fwx_config_handle(char *config, unsigned int len)
 	cJSON *data_obj = NULL;
 	if (!config || len == 0)
 		return -1;
-	
+
 	config_obj = cJSON_Parse(config);
 	if (!config_obj){
 		printk("parse json failed, value = %s\n", config);
@@ -95,7 +95,7 @@ int fwx_config_handle(char *config, unsigned int len)
 			break;
 		}
 	}
-	
+
 
 	if (temp_data_obj){
 		cJSON_Delete(temp_data_obj);
@@ -171,7 +171,7 @@ int fwx_register_dev(void)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
 	g_fwx_dev.c = class_create(THIS_MODULE, FWX_CHAR_DEV);
 #else
- 	g_fwx_dev.c = class_create(FWX_CHAR_DEV);
+	g_fwx_dev.c = class_create(FWX_CHAR_DEV);
 #endif
 
 	if (IS_ERR_OR_NULL(g_fwx_dev.c))
@@ -199,4 +199,3 @@ void fwx_unregister_dev(void)
 	cdev_del(&g_fwx_dev.char_dev);
 	unregister_chrdev_region(g_fwx_dev.id, 1);
 }
-

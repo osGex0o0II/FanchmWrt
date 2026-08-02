@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #ifndef __AF_CLIENT_H__
 #define __AF_CLIENT_H__
@@ -86,7 +86,7 @@ typedef struct af_client_info
 	unsigned long update_jiffies;
 	flow_stat_t flow;
 	flow_stat_t last_flow;
-	flow_stat_t period_flow; 
+	flow_stat_t period_flow;
 	flow_rate_t rate;
 	struct timer_list client_timer;
 	unsigned int visit_app_num;
@@ -96,7 +96,7 @@ typedef struct af_client_info
 	int record_whitelist;
 	visiting_info_t visiting;
 	int report_count;
-	unsigned int timer_count;  
+	unsigned int timer_count;
 	spinlock_t visit_info_lock;
 	struct hlist_head visit_info_hash[MAX_VISIT_INFO_HASH_SIZE];
 	struct proc_dir_entry *proc_dir;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <unistd.h>
 #include <stdlib.h>
@@ -27,58 +27,58 @@
 #define MAX_MAC_ADDR_LEN 18
 
 int get_iface_status(char *ifname, iface_status_t *status){
-    int ret = -1; 
+    int ret = -1;
     char *buf = NULL;
 
     buf = get_interface_status_buf(ifname);
     if (!buf){
-		
+
     LOG_ERROR("get interface status buf error\n");
-        return -1; 
-    }   
+        return -1;
+    }
     struct json_object *resp_obj = json_tokener_parse(buf);
     if (!resp_obj) {
         LOG_ERROR("get_iface_status: failed to parse JSON\n");
         free(buf);
         return -1;
     }
-    
+
     struct json_object *ipv4_addr_array = json_object_object_get(resp_obj, "ipv4-address");
     struct json_object *route_array = json_object_object_get(resp_obj, "route");
     struct json_object *dns_server_array = json_object_object_get(resp_obj, "dns-server");
-    
-    if (ipv4_addr_array && json_object_array_length(ipv4_addr_array) > 0){ 
-       struct json_object *ipv4_addr_obj = json_object_array_get_idx(ipv4_addr_array, 0); 
+
+    if (ipv4_addr_array && json_object_array_length(ipv4_addr_array) > 0){
+       struct json_object *ipv4_addr_obj = json_object_array_get_idx(ipv4_addr_array, 0);
        struct json_object *addr_obj = json_object_object_get(ipv4_addr_obj, "address");
        struct json_object *mask_obj = json_object_object_get(ipv4_addr_obj, "mask");
        if (addr_obj && mask_obj){
            strcpy(status->ip, json_object_get_string(addr_obj));
            char *mask_str = cidr2str(json_object_get_int(mask_obj));
-            if (mask_str) 
+            if (mask_str)
            strcpy(status->mask, mask_str);
 
        }
-    }  
+    }
 	else{
 		LOG_ERROR("parse json error\n");
 	}
-    
-    if (route_array && json_object_array_length(route_array) > 0){ 
-       struct json_object *route_obj = json_object_array_get_idx(route_array, 0); 
+
+    if (route_array && json_object_array_length(route_array) > 0){
+       struct json_object *route_obj = json_object_array_get_idx(route_array, 0);
        struct json_object *nexhop_obj = json_object_object_get(route_obj, "nexthop");
        if (nexhop_obj){
            strcpy(status->gateway, json_object_get_string(nexhop_obj));
        }
-    }   
+    }
 
-    if (dns_server_array && json_object_array_length(dns_server_array) > 0){ 
-       struct json_object *dns1_obj = json_object_array_get_idx(dns_server_array, 0); 
+    if (dns_server_array && json_object_array_length(dns_server_array) > 0){
+       struct json_object *dns1_obj = json_object_array_get_idx(dns_server_array, 0);
        if (dns1_obj){
            strcpy(status->dns1, json_object_get_string(dns1_obj));
        }
-    }   
-    if (dns_server_array && json_object_array_length(dns_server_array)  > 1){ 
-       struct json_object *dns2_obj = json_object_array_get_idx(dns_server_array, 1); 
+    }
+    if (dns_server_array && json_object_array_length(dns_server_array)  > 1){
+       struct json_object *dns2_obj = json_object_array_get_idx(dns_server_array, 1);
        if (dns2_obj){
            strcpy(status->dns2, json_object_get_string(dns2_obj));
        }
@@ -100,16 +100,16 @@ char *get_interface_status_buf(char *ifname) {
     if (!ifname) {
         return NULL;
     }
-    
+
 
     char cmd[256] = {0};
     snprintf(cmd, sizeof(cmd), "ifstatus %s", ifname);
-    
+
     FILE *fp = popen(cmd, "r");
     if (!fp) {
         return NULL;
     }
-    
+
 
     size_t buf_size = 4096;
     char *buf = malloc(buf_size);
@@ -117,7 +117,7 @@ char *get_interface_status_buf(char *ifname) {
         pclose(fp);
         return NULL;
     }
-    
+
     size_t total_read = 0;
     char line[256];
     while (fgets(line, sizeof(line), fp)) {
@@ -136,7 +136,7 @@ char *get_interface_status_buf(char *ifname) {
         total_read += line_len;
         buf[total_read] = '\0';
     }
-    
+
     pclose(fp);
     return buf;
 }
@@ -146,17 +146,17 @@ char *cidr2str(int cidr) {
     if (cidr < 0 || cidr > 32) {
         return NULL;
     }
-    
+
     static char mask_str[16];
     unsigned int mask = 0xFFFFFFFF << (32 - cidr);
-    
+
 
     snprintf(mask_str, sizeof(mask_str), "%d.%d.%d.%d",
         (mask >> 24) & 0xFF,
         (mask >> 16) & 0xFF,
         (mask >> 8) & 0xFF,
         mask & 0xFF);
-    
+
     return mask_str;
 }
 
@@ -348,7 +348,7 @@ static int ensure_fwx_network_section(struct uci_context *ctx)
 
 static const char *get_section_option_value(struct uci_section *s, const char *option_name) {
     if (!s || !option_name) return NULL;
-    
+
     struct uci_option *o = uci_lookup_option(s->package->ctx, s, option_name);
     if (!o || o->type != UCI_TYPE_STRING) {
         return NULL;
@@ -357,15 +357,15 @@ static const char *get_section_option_value(struct uci_section *s, const char *o
 }
 
 
-static void get_section_list_values(struct uci_section *s, const char *option_name, 
+static void get_section_list_values(struct uci_section *s, const char *option_name,
                                      struct json_object *array) {
     if (!s || !option_name || !array) return;
-    
+
     struct uci_option *o = uci_lookup_option(s->package->ctx, s, option_name);
     if (!o || o->type != UCI_TYPE_LIST) {
         return;
     }
-    
+
     struct uci_element *e;
     uci_foreach_element(&o->v.list, e) {
         json_object_array_add(array, json_object_new_string(e->name));
@@ -383,7 +383,7 @@ static struct json_object *get_interface_list_by_type(const char *iftype) {
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct uci_package *pkg = NULL;
     if (uci_load(ctx, "network", &pkg) != UCI_OK) {
         LOG_ERROR("Failed to load network package\n");
@@ -391,13 +391,13 @@ static struct json_object *get_interface_list_by_type(const char *iftype) {
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
 
     struct uci_element *e;
     uci_foreach_element(&pkg->sections, e) {
-		
+
         struct uci_section *s = uci_to_section(e);
-		
+
 		LOG_DEBUG("s = %p\n", s);
         LOG_DEBUG("s->type: %s\n", s->type);
 
@@ -406,30 +406,30 @@ static struct json_object *get_interface_list_by_type(const char *iftype) {
         }
 
         const char *name_str = s->e.name;
-		
+
         if (!name_str) {
             continue;
         }
         LOG_DEBUG("name_str: %s\n", name_str);
 
-        
+
         if (!interface_name_matches(name_str, iftype)) {
 			LOG_DEBUG("not match \n");
             continue;
         }
-        
+
         const char *device_str = get_section_option_value(s, "device");
         const char *proto_str = get_section_option_value(s, "proto");
         char ipaddr_buf[32] = {0};
         char netmask_buf[32] = {0};
         const char *gateway_str = get_section_option_value(s, "gateway");
         get_interface_ipaddr_and_mask(ctx, s, ipaddr_buf, sizeof(ipaddr_buf), netmask_buf, sizeof(netmask_buf));
-        
-        LOG_DEBUG("get_interface_list_by_type: device=%s, proto=%s, ipaddr=%s\n", 
+
+        LOG_DEBUG("get_interface_list_by_type: device=%s, proto=%s, ipaddr=%s\n",
                  device_str ? device_str : "NULL",
                  proto_str ? proto_str : "NULL",
                  ipaddr_buf[0] ? ipaddr_buf : "NULL");
-        
+
 
         struct json_object *dns_array = json_object_new_array();
         if (!dns_array) {
@@ -437,7 +437,7 @@ static struct json_object *get_interface_list_by_type(const char *iftype) {
             continue;
         }
         get_section_list_values(s, "dns", dns_array);
-        
+
         LOG_DEBUG("get_interface_list_by_type: Creating interface object\n");
         struct json_object *iface_obj = json_object_new_object();
         if (!iface_obj) {
@@ -445,7 +445,7 @@ static struct json_object *get_interface_list_by_type(const char *iftype) {
             json_object_put(dns_array);
             continue;
         }
-        
+
         json_object_object_add(iface_obj, "name", json_object_new_string(name_str));
         json_object_object_add(iface_obj, "device", json_object_new_string(device_str ? device_str : ""));
         json_object_object_add(iface_obj, "proto", json_object_new_string(proto_str ? proto_str : ""));
@@ -453,18 +453,18 @@ static struct json_object *get_interface_list_by_type(const char *iftype) {
         json_object_object_add(iface_obj, "netmask", json_object_new_string(netmask_buf));
         json_object_object_add(iface_obj, "gateway", json_object_new_string(gateway_str ? gateway_str : ""));
         json_object_object_add(iface_obj, "dns", dns_array);
-        
+
         LOG_DEBUG("get_interface_list_by_type: Added interface %s to array\n", name_str);
         json_object_array_add(interfaces_array, iface_obj);
         LOG_DEBUG("222222222222\n");
     }
-    
+
 	LOG_DEBUG("22222222\n");
-	
-	
+
+
     uci_free_context(ctx);
-    
-	
+
+
     json_object_object_add(data_obj, "list", interfaces_array);
     LOG_DEBUG("data_obj: %s\n", json_object_to_json_string(data_obj));
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
@@ -492,33 +492,33 @@ static struct json_object *add_or_mod_interface(struct json_object *req_obj, con
 	if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct json_object *name_obj = json_object_object_get(req_obj, "name");
     struct json_object *device_obj = json_object_object_get(req_obj, "device");
     struct json_object *proto_obj = json_object_object_get(req_obj, "proto");
-    
+
     if (!name_obj || !device_obj || !proto_obj) {
         LOG_ERROR("Missing required fields: name, device, proto\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *name = json_object_get_string(name_obj);
     const char *device = json_object_get_string(device_obj);
     const char *proto = json_object_get_string(proto_obj);
-    
+
 
     if (!interface_name_matches(name, iftype)) {
         LOG_ERROR("Interface name '%s' must start with '%s'\n", name, iftype);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
 
-    if (strcmp(proto, "dhcp") != 0 && strcmp(proto, "static") != 0 && 
+
+    if (strcmp(proto, "dhcp") != 0 && strcmp(proto, "static") != 0 &&
         (strcmp(iftype, "wan") != 0 || strcmp(proto, "pppoe") != 0)) {
         LOG_ERROR("Invalid protocol '%s' for %s interface\n", proto, iftype);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
 
     if (strcmp(proto, "static") == 0) {
         struct json_object *ipaddr_obj = json_object_object_get(req_obj, "ipaddr");
@@ -528,20 +528,20 @@ static struct json_object *add_or_mod_interface(struct json_object *req_obj, con
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
     }
-    
+
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx) {
         LOG_ERROR("Failed to allocate UCI context\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
 
     struct uci_ptr ptr;
     char uci_path[256];
     snprintf(uci_path, sizeof(uci_path), "network.%s", name);
-    
+
     int exists = (uci_lookup_ptr(ctx, &ptr, uci_path, true) == UCI_OK);
-    
+
     if (is_add) {
 
         if (exists) {
@@ -557,51 +557,51 @@ static struct json_object *add_or_mod_interface(struct json_object *req_obj, con
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
     }
-    
+
 
     if (is_add) {
 
 
         char section_path[256];
         snprintf(section_path, sizeof(section_path), "network.%s=interface", name);
-        
+
         struct uci_ptr ptr;
         if (uci_lookup_ptr(ctx, &ptr, section_path, true) != UCI_OK) {
             LOG_ERROR("Failed to create interface section '%s'\n", name);
             uci_free_context(ctx);
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
-        
+
         if (uci_set(ctx, &ptr) != UCI_OK) {
             LOG_ERROR("Failed to set interface section '%s'\n", name);
             uci_free_context(ctx);
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
-        
+
         if (uci_save(ctx, ptr.p) != UCI_OK) {
             LOG_ERROR("Failed to save network package\n");
             if (ptr.p) uci_unload(ctx, ptr.p);
             uci_free_context(ctx);
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
-        
+
         if (ptr.p) uci_unload(ctx, ptr.p);
     }
-    
+
 
     snprintf(uci_path, sizeof(uci_path), "network.%s.device", name);
     fwx_uci_set_value(ctx, uci_path, (char *)device);
-    
+
 
     snprintf(uci_path, sizeof(uci_path), "network.%s.proto", name);
     fwx_uci_set_value(ctx, uci_path, (char *)proto);
-    
+
 
     if (strcmp(proto, "static") == 0) {
         struct json_object *ipaddr_obj = json_object_object_get(req_obj, "ipaddr");
         struct json_object *netmask_obj = json_object_object_get(req_obj, "netmask");
         struct json_object *gateway_obj = json_object_object_get(req_obj, "gateway");
-        
+
         if (ipaddr_obj) {
             if (strcmp(iftype, "lan") == 0) {
                 const char *ipaddr = json_object_get_string(ipaddr_obj);
@@ -622,7 +622,7 @@ static struct json_object *add_or_mod_interface(struct json_object *req_obj, con
                 fwx_uci_set_value(ctx, uci_path, (char *)json_object_get_string(ipaddr_obj));
             }
         }
-        
+
         if (strcmp(iftype, "lan") == 0) {
             snprintf(uci_path, sizeof(uci_path), "network.%s.netmask", name);
             fwx_uci_delete(ctx, uci_path);
@@ -630,12 +630,12 @@ static struct json_object *add_or_mod_interface(struct json_object *req_obj, con
             snprintf(uci_path, sizeof(uci_path), "network.%s.netmask", name);
             fwx_uci_set_value(ctx, uci_path, (char *)json_object_get_string(netmask_obj));
         }
-        
+
         if (gateway_obj) {
             snprintf(uci_path, sizeof(uci_path), "network.%s.gateway", name);
             fwx_uci_set_value(ctx, uci_path, (char *)json_object_get_string(gateway_obj));
         }
-        
+
 
         struct json_object *dns_obj = json_object_object_get(req_obj, "dns");
         if (dns_obj && json_object_is_type(dns_obj, json_type_array)) {
@@ -643,14 +643,14 @@ static struct json_object *add_or_mod_interface(struct json_object *req_obj, con
             char dns_path[256];
             snprintf(dns_path, sizeof(dns_path), "network.%s.dns", name);
             fwx_uci_delete(ctx, dns_path);
-            
+
 
             struct uci_ptr ptr;
             memset(&ptr, 0, sizeof(ptr));
             ptr.package = "network";
             ptr.section = name;
             ptr.option = "dns";
-            
+
             int dns_len = json_object_array_length(dns_obj);
             for (i = 0; i < dns_len; i++) {
                 struct json_object *dns_item = json_object_array_get_idx(dns_obj, i);
@@ -667,21 +667,21 @@ static struct json_object *add_or_mod_interface(struct json_object *req_obj, con
 
         struct json_object *username_obj = json_object_object_get(req_obj, "username");
         struct json_object *password_obj = json_object_object_get(req_obj, "password");
-        
+
         if (username_obj) {
             snprintf(uci_path, sizeof(uci_path), "network.%s.username", name);
             fwx_uci_set_value(ctx, uci_path, (char *)json_object_get_string(username_obj));
         }
-        
+
         if (password_obj) {
             snprintf(uci_path, sizeof(uci_path), "network.%s.password", name);
             fwx_uci_set_value(ctx, uci_path, (char *)json_object_get_string(password_obj));
         }
     }
-    
+
     fwx_uci_commit(ctx, "network");
     uci_free_context(ctx);
-    
+
     LOG_DEBUG("%s interface '%s' %s successfully\n", iftype, name, is_add ? "added" : "modified");
     return fwx_gen_api_response_data(API_CODE_SUCCESS, NULL);
 }
@@ -715,44 +715,44 @@ static struct json_object *del_interface(struct json_object *req_obj, const char
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct json_object *name_obj = json_object_object_get(req_obj, "name");
     if (!name_obj) {
         LOG_ERROR("Missing required field: name\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     const char *name = json_object_get_string(name_obj);
-    
+
 
     if (!interface_name_matches(name, iftype)) {
         LOG_ERROR("Interface name '%s' must start with '%s'\n", name, iftype);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx) {
         LOG_ERROR("Failed to allocate UCI context\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
 
     struct uci_ptr ptr;
     char uci_path[256];
     snprintf(uci_path, sizeof(uci_path), "network.%s", name);
-    
+
     if (uci_lookup_ptr(ctx, &ptr, uci_path, true) != UCI_OK) {
         LOG_ERROR("Interface '%s' not found\n", name);
         uci_free_context(ctx);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
 
     fwx_uci_delete(ctx, uci_path);
-    
+
     fwx_uci_commit(ctx, "network");
     uci_free_context(ctx);
-    
+
     LOG_DEBUG("%s interface '%s' deleted successfully\n", iftype, name);
     return fwx_gen_api_response_data(API_CODE_SUCCESS, NULL);
 }
@@ -772,26 +772,26 @@ struct json_object *fwx_api_del_wan(struct json_object *req_obj) {
 
 struct json_object *fwx_api_get_lan_info(struct json_object *req_obj) {
     LOG_DEBUG("fwx_api_get_lan_info called\n");
-    
+
     struct json_object *data_obj = json_object_new_object();
     if (!data_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx) {
         LOG_ERROR("Failed to allocate UCI context\n");
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     char ipaddr_str[32] = {0};
     char netmask_str[32] = {0};
     char proto_str[32] = {0};
     char gateway_str[32] = {0};
     char dns1_str[32] = {0};
     char dns2_str[32] = {0};
-    
+
     {
         char ipaddr_list_buf[128] = {0};
         int list_ok = 0;
@@ -812,7 +812,7 @@ struct json_object *fwx_api_get_lan_info(struct json_object *req_obj) {
     }
     fwx_uci_get_value(ctx, "network.lan.proto", proto_str, sizeof(proto_str));
     fwx_uci_get_value(ctx, "network.lan.gateway", gateway_str, sizeof(gateway_str));
-    
+
 
     char dns_list_buf[128] = {0};
     if (fwx_uci_get_list_value(ctx, "network.lan.dns", dns_list_buf, sizeof(dns_list_buf), " ") == 0) {
@@ -826,7 +826,7 @@ struct json_object *fwx_api_get_lan_info(struct json_object *req_obj) {
             }
         }
     }
-    
+
     json_object_object_add(data_obj, "ipaddr", json_object_new_string(ipaddr_str));
     json_object_object_add(data_obj, "netmask", json_object_new_string(netmask_str));
     json_object_object_add(data_obj, "proto", json_object_new_string(proto_str));
@@ -834,27 +834,27 @@ struct json_object *fwx_api_get_lan_info(struct json_object *req_obj) {
     json_object_object_add(data_obj, "dns1", json_object_new_string(dns1_str));
     json_object_object_add(data_obj, "dns2", json_object_new_string(dns2_str));
     append_lan_dhcp_to_response(data_obj);
-    
+
     uci_free_context(ctx);
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
 
 struct json_object *fwx_api_set_lan_info(struct json_object *req_obj) {
     LOG_DEBUG("fwx_api_set_lan_info called22\n");
-    
+
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
-    
+
+
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx) {
         LOG_ERROR("Failed to allocate UCI context\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
 
     char test_buf[32] = {0};
     if (fwx_uci_get_value(ctx, "network.lan.proto", test_buf, sizeof(test_buf)) != 0) {
@@ -865,8 +865,8 @@ struct json_object *fwx_api_set_lan_info(struct json_object *req_obj) {
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
     }
-    
-    
+
+
 
     struct json_object *ipaddr_obj = json_object_object_get(req_obj, "ipaddr");
     struct json_object *netmask_obj = json_object_object_get(req_obj, "netmask");
@@ -874,7 +874,7 @@ struct json_object *fwx_api_set_lan_info(struct json_object *req_obj) {
     struct json_object *gateway_obj = json_object_object_get(req_obj, "gateway");
     struct json_object *dns1_obj = json_object_object_get(req_obj, "dns1");
     struct json_object *dns2_obj = json_object_object_get(req_obj, "dns2");
-    
+
     if (proto_obj) {
         const char *proto = json_object_get_string(proto_obj);
         if (proto && strcmp(proto, "pppoe") == 0) {
@@ -884,8 +884,8 @@ struct json_object *fwx_api_set_lan_info(struct json_object *req_obj) {
         }
         fwx_uci_set_value(ctx, "network.lan.proto", (char *)proto);
     }
-    
-    
+
+
     if (ipaddr_obj) {
         const char *ipaddr = json_object_get_string(ipaddr_obj);
         const char *netmask = netmask_obj ? json_object_get_string(netmask_obj) : NULL;
@@ -901,23 +901,23 @@ struct json_object *fwx_api_set_lan_info(struct json_object *req_obj) {
             replace_first_list_item(ctx, "network.lan.ipaddr", ipaddr_with_prefix);
         }
     }
-    
+
     fwx_uci_delete(ctx, "network.lan.netmask");
-    
+
     if (gateway_obj) {
         fwx_uci_set_value(ctx, "network.lan.gateway", (char *)json_object_get_string(gateway_obj));
     }
-    
+
 
     if (dns1_obj || dns2_obj) {
         fwx_uci_delete(ctx, "network.lan.dns");
-        
+
         struct uci_ptr ptr;
         memset(&ptr, 0, sizeof(ptr));
         ptr.package = "network";
         ptr.section = "lan";
         ptr.option = "dns";
-        
+
         if (dns1_obj) {
             const char *dns1 = json_object_get_string(dns1_obj);
             if (dns1 && strlen(dns1) > 0) {
@@ -927,7 +927,7 @@ struct json_object *fwx_api_set_lan_info(struct json_object *req_obj) {
                 }
             }
         }
-        
+
         if (dns2_obj) {
             const char *dns2 = json_object_get_string(dns2_obj);
             if (dns2 && strlen(dns2) > 0) {
@@ -949,19 +949,19 @@ struct json_object *fwx_api_set_lan_info(struct json_object *req_obj) {
 
 struct json_object *fwx_api_get_wan_info(struct json_object *req_obj) {
     LOG_DEBUG("fwx_api_get_wan_info called\n");
-    
+
     struct json_object *data_obj = json_object_new_object();
     if (!data_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx) {
         LOG_ERROR("Failed to allocate UCI context\n");
         json_object_put(data_obj);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     char ipaddr_str[32] = {0};
     char netmask_str[32] = {0};
     char proto_str[32] = {0};
@@ -970,14 +970,14 @@ struct json_object *fwx_api_get_wan_info(struct json_object *req_obj) {
     char dns2_str[32] = {0};
     char username_str[128] = {0};
     char password_str[128] = {0};
-    
+
     fwx_uci_get_value(ctx, "network.wan.ipaddr", ipaddr_str, sizeof(ipaddr_str));
     fwx_uci_get_value(ctx, "network.wan.netmask", netmask_str, sizeof(netmask_str));
     fwx_uci_get_value(ctx, "network.wan.proto", proto_str, sizeof(proto_str));
     fwx_uci_get_value(ctx, "network.wan.gateway", gateway_str, sizeof(gateway_str));
     fwx_uci_get_value(ctx, "network.wan.username", username_str, sizeof(username_str));
     fwx_uci_get_value(ctx, "network.wan.password", password_str, sizeof(password_str));
-    
+
 
     char dns_list_buf[128] = {0};
     if (fwx_uci_get_list_value(ctx, "network.wan.dns", dns_list_buf, sizeof(dns_list_buf), " ") == 0) {
@@ -991,7 +991,7 @@ struct json_object *fwx_api_get_wan_info(struct json_object *req_obj) {
             }
         }
     }
-    
+
     json_object_object_add(data_obj, "ipaddr", json_object_new_string(ipaddr_str));
     json_object_object_add(data_obj, "netmask", json_object_new_string(netmask_str));
     json_object_object_add(data_obj, "proto", json_object_new_string(proto_str));
@@ -1000,26 +1000,26 @@ struct json_object *fwx_api_get_wan_info(struct json_object *req_obj) {
     json_object_object_add(data_obj, "dns2", json_object_new_string(dns2_str));
     json_object_object_add(data_obj, "username", json_object_new_string(username_str));
     json_object_object_add(data_obj, "password", json_object_new_string(password_str));
-    
+
     uci_free_context(ctx);
-    
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
 
 struct json_object *fwx_api_set_wan_info(struct json_object *req_obj) {
     LOG_DEBUG("fwx_api_set_wan_info called\n");
-    
+
     if (!req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx) {
         LOG_ERROR("Failed to allocate UCI context\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
-    
+
 
     char test_buf[32] = {0};
     if (fwx_uci_get_value(ctx, "network.wan.proto", test_buf, sizeof(test_buf)) != 0) {
@@ -1030,7 +1030,7 @@ struct json_object *fwx_api_set_wan_info(struct json_object *req_obj) {
             return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
         }
     }
-    
+
 
     struct json_object *proto_obj = json_object_object_get(req_obj, "proto");
     const char *proto = NULL;
@@ -1044,7 +1044,7 @@ struct json_object *fwx_api_set_wan_info(struct json_object *req_obj) {
             proto = proto_buf;
         }
     }
-    
+
     if (!proto) {
         LOG_ERROR("Protocol not specified and cannot be determined\n");
         uci_free_context(ctx);
@@ -1059,51 +1059,51 @@ struct json_object *fwx_api_set_wan_info(struct json_object *req_obj) {
         struct json_object *gateway_obj = json_object_object_get(req_obj, "gateway");
         struct json_object *dns1_obj = json_object_object_get(req_obj, "dns1");
         struct json_object *dns2_obj = json_object_object_get(req_obj, "dns2");
-        
+
         if (ipaddr_obj) {
             fwx_uci_set_value(ctx, "network.wan.ipaddr", (char *)json_object_get_string(ipaddr_obj));
         }
-        
+
         if (netmask_obj) {
             fwx_uci_set_value(ctx, "network.wan.netmask", (char *)json_object_get_string(netmask_obj));
         }
-        
+
         if (gateway_obj) {
             fwx_uci_set_value(ctx, "network.wan.gateway", (char *)json_object_get_string(gateway_obj));
         }
 
         if (dns1_obj || dns2_obj) {
             fwx_uci_delete(ctx, "network.wan.dns");
-            
+
             struct uci_ptr ptr;
             memset(&ptr, 0, sizeof(ptr));
             ptr.package = "network";
             ptr.section = "wan";
             ptr.option = "dns";
-            
+
             if (dns1_obj) {
                 const char *dns1 = json_object_get_string(dns1_obj);
                 if (dns1 && strlen(dns1) > 0) {
                     ptr.value = (char *)dns1;
-                    
+
                     if (uci_add_list(ctx, &ptr) != UCI_OK) {
                         LOG_ERROR("Failed to add DNS1 to list\n");
                     }
                 }
             }
-            
+
             if (dns2_obj) {
-                
+
                 const char *dns2 = json_object_get_string(dns2_obj);
                 if (dns2 && strlen(dns2) > 0) {
-                    
+
                     ptr.value = (char *)dns2;
                     if (uci_add_list(ctx, &ptr) != UCI_OK) {
                         LOG_ERROR("Failed to add DNS2 to list\n");
                     }
                 }
             }
-            
+
         }
     } else if (strcmp(proto, "pppoe") == 0) {
         struct json_object *username_obj = json_object_object_get(req_obj, "username");
@@ -1111,33 +1111,33 @@ struct json_object *fwx_api_set_wan_info(struct json_object *req_obj) {
         if (username_obj) {
             const char *username = json_object_get_string(username_obj);
             if (username && strlen(username) > 0) {
-                
+
                 fwx_uci_set_value(ctx, "network.wan.username", (char *)username);
             }
         }
-    
+
         if (password_obj) {
             const char *password = json_object_get_string(password_obj);
             if (password && strlen(password) > 0) {
-                
+
                 fwx_uci_set_value(ctx, "network.wan.password", (char *)password);
             }
         }
-         
+
     } else if (strcmp(proto, "dhcp") == 0) {
-        
+
     }
-    
+
     fwx_uci_commit(ctx, "network");
     uci_free_context(ctx);
-    
+
 
     LOG_DEBUG("Reloading network configuration...\n");
     int ret = system("/etc/init.d/network reload");
     if (ret != 0) {
         LOG_ERROR("Failed to reload network, return code: %d\n", ret);
     }
-    
+
     LOG_DEBUG("WAN interface info updated successfully\n");
     return fwx_gen_api_response_data(API_CODE_SUCCESS, NULL);
 }
@@ -1212,7 +1212,7 @@ static int parse_leasetime_to_minutes(const char *lt)
     } else if (unit == 'm' || unit == 'M') {
         return val;
     }
-    return val; 
+    return val;
 }
 
 
@@ -1220,7 +1220,7 @@ static void format_minutes_to_leasetime(int minutes, char *out, size_t out_len)
 {
     if (minutes < 0) minutes = 0;
     if (minutes > 60) {
-        int hours = minutes / 60; 
+        int hours = minutes / 60;
         snprintf(out, out_len, "%dh", hours > 0 ? hours : 1);
     } else {
         snprintf(out, out_len, "%dm", minutes);
@@ -1298,7 +1298,7 @@ static int ensure_dhcp_lan_section(struct uci_context *ctx)
         return -1;
     }
     if (ptr.p) uci_unload(ctx, ptr.p);
-    
+
     fwx_uci_set_value(ctx, "dhcp.lan.interface", "lan");
     return 0;
 }
@@ -1313,24 +1313,24 @@ static void append_lan_dhcp_to_response(struct json_object *data_obj)
 
 static int update_lan_dhcp_from_req(struct json_object *dhcp_obj)
 {
-    
 
-    if (!dhcp_obj) return 0; 
-	
-    
+
+    if (!dhcp_obj) return 0;
+
+
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx) {
         LOG_ERROR("update_lan_dhcp_from_req: alloc ctx failed\n");
         return -1;
     }
-	
-    
+
+
 
     struct json_object *enable_obj = json_object_object_get(dhcp_obj, "enable");
     struct json_object *start_obj = json_object_object_get(dhcp_obj, "start");
     struct json_object *limit_obj = json_object_object_get(dhcp_obj, "limit");
     struct json_object *lt_obj = json_object_object_get(dhcp_obj, "leasetime");
-    
+
 
     if (enable_obj) {
         int en = json_object_get_int(enable_obj);
@@ -1352,10 +1352,9 @@ static int update_lan_dhcp_from_req(struct json_object *dhcp_obj)
         format_minutes_to_leasetime(minutes, lease_buf, sizeof(lease_buf));
         fwx_uci_set_value(ctx, "dhcp.lan.leasetime", lease_buf);
     }
-    
+
 
     fwx_uci_commit(ctx, "dhcp");
     uci_free_context(ctx);
     return 0;
 }
-

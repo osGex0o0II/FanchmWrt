@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <unistd.h>
 #include <stdlib.h>
@@ -110,7 +110,7 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
     struct json_object *ip_obj = json_object_object_get(root, "ip");
     if (ip_obj)
         strncpy(node->ip, json_object_get_string(ip_obj), sizeof(node->ip));
-    
+
     struct json_object *ipv6_obj = json_object_object_get(root, "ipv6");
     if (ipv6_obj) {
         const char *ipv6_str = json_object_get_string(ipv6_obj);
@@ -124,32 +124,32 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
     } else {
         node->ipv6[0] = '\0';
     }
-    
+
     struct json_object *active_obj = json_object_object_get(root, "active");
     int prev_active = node->active;
     if (active_obj) {
         node->active = json_object_get_int(active_obj);
         LOG_DEBUG("fwx_netlink: received active=%d for %s\n", node->active, mac);
     }
-    
-    
+
+
     struct json_object *up_flow_obj = json_object_object_get(root, "up_flow");
     struct json_object *down_flow_obj = json_object_object_get(root, "down_flow");
     unsigned long long total_up_bytes = 0;
     unsigned long long total_down_bytes = 0;
-    
+
     if (up_flow_obj) {
-        
+
         total_up_bytes = (unsigned long long)json_object_get_int64(up_flow_obj) * 1024;
     }
     if (down_flow_obj) {
-        
+
         total_down_bytes = (unsigned long long)json_object_get_int64(down_flow_obj) * 1024;
     }
-    
+
     LOG_DEBUG("fwx_netlink: received flow data for %s: up_flow=%llu KB (%llu bytes), down_flow=%llu KB (%llu bytes)\n",
              mac, total_up_bytes / 1024, total_up_bytes, total_down_bytes / 1024, total_down_bytes);
-    
+
     struct timeval cur_time;
     gettimeofday(&cur_time, NULL);
     time_t cur_time_t = cur_time.tv_sec;
@@ -163,11 +163,11 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
     if (tm_info) {
         hour = tm_info->tm_hour;
     }
-    
+
     daily_hourly_stat_t *today_stat = NULL;
     if (hour >= 0 && hour < HOURS_PER_DAY) {
         today_stat = get_today_stat(node);
-        
+
         if (node->online == 1) {
             if (today_stat) {
                 today_stat->hourly_online_time[hour] += REPORT_INTERVAL_SECS;
@@ -175,7 +175,7 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
                          hour, mac, REPORT_INTERVAL_SECS);
             }
         }
-        
+
         if (node->active == 1) {
             if (today_stat) {
                 today_stat->hourly_active_time[hour] += REPORT_INTERVAL_SECS;
@@ -185,18 +185,18 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
         }
         update_online_session_activity(node, REPORT_INTERVAL_SECS, node->active == 1 ? REPORT_INTERVAL_SECS : 0);
     }
-    
-    
+
+
     if (hour >= 0 && hour < HOURS_PER_DAY && (total_up_bytes > 0 || total_down_bytes > 0)) {
         if (today_stat) {
-            
+
             today_stat->hourly_traffic[hour].up_bytes += total_up_bytes;
             today_stat->hourly_traffic[hour].down_bytes += total_down_bytes;
             LOG_DEBUG("fwx_netlink: updated hourly_traffic[%d] for %s: up_bytes=%llu, down_bytes=%llu\n",
                      hour, mac, today_stat->hourly_traffic[hour].up_bytes, today_stat->hourly_traffic[hour].down_bytes);
         }
-        
-        
+
+
         u_int32_t today = get_today_start_timestamp();
         if (g_global_traffic_date != today) {
             memset(g_global_hourly_traffic, 0, sizeof(g_global_hourly_traffic));
@@ -206,7 +206,7 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
         g_global_hourly_traffic[hour].down_bytes += total_down_bytes;
     }
     update_online_session_flow(node, total_up_bytes, total_down_bytes);
-    
+
     struct json_object *visit_array = json_object_object_get(root, "visit_info");
     if (!visit_array)
     {
@@ -219,7 +219,7 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
         struct json_object *visit_obj = json_object_array_get_idx(visit_array, i);
         struct json_object *appid_obj = json_object_object_get(visit_obj, "appid");
         struct json_object *action_obj = json_object_object_get(visit_obj, "latest_action");
-        
+
         int appid = json_object_get_int(appid_obj);
         int action = json_object_get_int(action_obj);
 
@@ -228,8 +228,8 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
         if (id <= 0 || type <= 0)
             continue;
         update_online_session_recent_app(node, appid);
-        
-        
+
+
         visit_stat_t *stat_node = NULL;
         int found_stat = 0;
         list_for_each_entry(stat_node, &node->stat_list, list) {
@@ -239,8 +239,8 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
                 break;
             }
         }
-        
-        
+
+
         if (!found_stat) {
             stat_node = (visit_stat_t *)calloc(1, sizeof(visit_stat_t));
             if (stat_node) {
@@ -250,8 +250,8 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
                 list_add(&stat_node->list, &node->stat_list);
             }
         }
-        
-        
+
+
         update_global_app_type_stats(appid, REPORT_INTERVAL_SECS);
 
 
@@ -259,7 +259,7 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
         visit_info_t *p = NULL;
         int found = 0;
         int cur_time_sec = cur_time.tv_sec;
-        
+
         list_for_each_entry(p, &node->online_visit, visit) {
             if (p->appid == appid && p->action == action) {
                 p->latest_time = cur_time_sec;
@@ -267,7 +267,7 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
                 break;
             }
         }
-        
+
 
         if (!found) {
             p = (visit_info_t *)calloc(1, sizeof(visit_info_t));
@@ -280,7 +280,7 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
             INIT_LIST_HEAD(&p->visit);
 
             add_visit_info_node(&node->online_visit, p);
-			
+
         }
     }
     json_object_put(root);

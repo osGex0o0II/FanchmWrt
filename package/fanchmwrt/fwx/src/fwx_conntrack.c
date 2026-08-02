@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <linux/init.h>
 #include <linux/module.h>
@@ -28,8 +28,8 @@ struct hlist_head af_conn_table[AF_CONN_HASH_SIZE];
 
 DEFINE_SPINLOCK(af_conn_lock);
 
-static u32 af_conn_hash(u32 src_ip, u32 dst_ip, 
-                       u16 src_port, u16 dst_port, 
+static u32 af_conn_hash(u32 src_ip, u32 dst_ip,
+                       u16 src_port, u16 dst_port,
                        u8 protocol)
 {
     return jhash_3words(src_ip, dst_ip,
@@ -65,7 +65,7 @@ af_conn_t *af_conn_add(u32 src_ip, u32 dst_ip, u16 src_port, u16 dst_port, u8 pr
     if (!conn) {
         return NULL;
     }
-    
+
     conn->src_ip = src_ip;
     conn->dst_ip = dst_ip;
     conn->src_port = src_port;
@@ -88,7 +88,7 @@ af_conn_t* af_conn_find(u32 src_ip, u32 dst_ip, u16 src_port, u16 dst_port, u8 p
 {
     u32 hash;
     af_conn_t *conn;
-    
+
     hash = af_conn_hash(src_ip, dst_ip, src_port, dst_port, protocol);
 	hlist_for_each_entry(conn, &af_conn_table[hash], node)
 	{
@@ -154,7 +154,7 @@ void af_conn_clean_timeout(void)
         last_bucket = 0;
     }
     spin_unlock(&af_conn_lock);
-} 
+}
 
 struct af_conn_iter_state
 {
@@ -205,7 +205,7 @@ static int af_conn_seq_show(struct seq_file *s, void *v)
     if (v == SEQ_START_TOKEN)
     {
         index = 0;
-        seq_printf(s, "%-4s %-20s %-20s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n", 
+        seq_printf(s, "%-4s %-20s %-20s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n",
         "Id", "src_ip", "dst_ip", "src_port", "dst_port", "protocol", "app_id", "drop", "inactive", "total_pkts");
         return 0;
     }
@@ -297,7 +297,7 @@ int af_conn_init(void)
 	{
 		INIT_HLIST_HEAD(&af_conn_table[i]);
 	}
-    af_conn_init_procfs(); 
+    af_conn_init_procfs();
     return 0;
 }
 

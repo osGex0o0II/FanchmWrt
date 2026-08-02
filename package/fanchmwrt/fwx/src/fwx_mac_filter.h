@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #ifndef __FWX_MAC_FILTER_H__
 #define __FWX_MAC_FILTER_H__
@@ -53,4 +53,4 @@ int fwx_api_flush_mac_filter_rule(cJSON *data_obj);
 
 int fwx_api_mod_mac_filter_rule(cJSON *data_obj);
 
-#endif 
+#endif

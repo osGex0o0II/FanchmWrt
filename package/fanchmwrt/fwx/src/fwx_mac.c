@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <linux/init.h>
 #include <linux/module.h>
@@ -23,7 +23,7 @@ static int mac_hash(const unsigned char *mac) {
 void fwx_mac_config_init(mac_config_t *config){
 	int i;
 	for (i = 0; i < MAC_HASH_SIZE; i++){
- 		INIT_HLIST_HEAD(&config->hash_table[i]);
+		INIT_HLIST_HEAD(&config->hash_table[i]);
 	}
 }
 

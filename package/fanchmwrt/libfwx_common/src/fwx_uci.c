@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <stdio.h>
 #include <string.h>
@@ -25,12 +25,12 @@ int fwx_uci_get_int_value(struct uci_context *ctx, char *key)
     if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
         return ret;
     }
-    
+
     if (!(ptr.flags & UCI_LOOKUP_COMPLETE)) {
         ctx->err = UCI_ERR_NOTFOUND;
         goto done;
     }
-    
+
     e = ptr.last;
     switch(e->type) {
         case UCI_TYPE_SECTION:
@@ -43,7 +43,7 @@ int fwx_uci_get_int_value(struct uci_context *ctx, char *key)
             break;
     }
 done:
-	
+
 	if (ptr.p)
 		uci_unload(ctx, ptr.p);
     return ret;
@@ -63,13 +63,13 @@ int fwx_uci_get_value(struct uci_context *ctx, char *key, char *output, int out_
         ret = 1;
         return ret;
     }
-    
+
     if (!(ptr.flags & UCI_LOOKUP_COMPLETE)) {
         ctx->err = UCI_ERR_NOTFOUND;
         ret = 1;
         goto done;
     }
-    
+
     e = ptr.last;
     switch(e->type) {
         case UCI_TYPE_SECTION:
@@ -82,7 +82,7 @@ int fwx_uci_get_value(struct uci_context *ctx, char *key, char *output, int out_
 			ret = 1;
             break;
     }
-done:    
+done:
 	if (ptr.p)
 		uci_unload(ctx, ptr.p);
     return ret;
@@ -96,7 +96,7 @@ int fwx_uci_delete(struct uci_context *ctx, char *key)
     int ret = UCI_OK;
     int dummy;
     char *parameters ;
-    char param_tmp[128] = {0};    
+    char param_tmp[128] = {0};
     strcpy(param_tmp, key);
     if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
         ret = 1;
@@ -124,7 +124,7 @@ int fwx_uci_add_list(struct uci_context *ctx, char *key, char *value)
         printf("value too long\n");
         return -1;
     }
-    char param_tmp[MAX_PARAM_LIST_LEN] = {0};    
+    char param_tmp[MAX_PARAM_LIST_LEN] = {0};
     sprintf(param_tmp, "%s=%s", key, value);
     if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
         ret = 1;
@@ -152,7 +152,7 @@ int fwx_uci_get_list_value(struct uci_context *ctx, char *key, char *output, int
     if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
         return ret;
     }
-    
+
     if (!(ptr.flags & UCI_LOOKUP_COMPLETE)) {
         ctx->err = UCI_ERR_NOTFOUND;
         goto done;
@@ -182,7 +182,7 @@ int fwx_uci_get_list_value(struct uci_context *ctx, char *key, char *output, int
         default:
             break;
     }
-done:	
+done:
 	if (ptr.p)
 		uci_unload(ctx, ptr.p);
     return ret;
@@ -196,7 +196,7 @@ int fwx_uci_add_int_list(struct uci_context *ctx, char *key, int value)
     int ret = UCI_OK;
     int dummy;
     char *parameters ;
-    char param_tmp[128] = {0};    
+    char param_tmp[128] = {0};
     sprintf(param_tmp, "%s=%d", key, value);
     if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
         ret = 1;
@@ -218,7 +218,7 @@ int fwx_uci_del_list(struct uci_context *ctx, char *key, char *value)
     int ret = UCI_OK;
     int dummy;
     char *parameters ;
-    char param_tmp[128] = {0};    
+    char param_tmp[128] = {0};
     sprintf(param_tmp, "%s=%s", key, value);
     if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
         ret = 1;
@@ -241,13 +241,13 @@ int fwx_uci_set_value(struct uci_context *ctx, char *key, char *value)
     int ret = UCI_OK;
     int dummy;
     char *parameters ;
-    char param_tmp[2048] = {0};    
+    char param_tmp[2048] = {0};
     sprintf(param_tmp, "%s=%s", key, value);
     if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
         ret = 1;
         return ret;
     }
-    
+
     e = ptr.last;
     ret = uci_set(ctx, &ptr);
     if (ret == UCI_OK)
@@ -265,7 +265,7 @@ int fwx_uci_set_int_value(struct uci_context *ctx, char *key, int value)
     int ret = UCI_OK;
     int dummy;
     char *parameters ;
-    char param_tmp[128] = {0};    
+    char param_tmp[128] = {0};
     sprintf(param_tmp, "%s=%d", key, value);
     if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
         ret = 1;
@@ -301,10 +301,10 @@ int fwx_uci_commit(struct uci_context *ctx, const char * package) {
     }
     if (uci_lookup_ptr(ctx, &ptr, package, true) != UCI_OK) {
         return -1;
-    }   
+    }
 
     if (uci_commit(ctx, &ptr.p, false) != UCI_OK) {
-    	ret = -1;
+	ret = -1;
         goto done;
     }
 done:
@@ -317,19 +317,19 @@ done:
 int fwx_uci_get_list_num(struct uci_context * ctx, char *package, char *section){
     int count = 0;
     struct uci_ptr p;
-    struct uci_element *e; 
+    struct uci_element *e;
     struct uci_package *pkg = NULL;
 
     if (UCI_OK != uci_load(ctx, package, &pkg)){
-        return -1; 
-    }   
-    uci_foreach_element(&pkg->sections, e){ 
+        return -1;
+    }
+    uci_foreach_element(&pkg->sections, e){
         struct uci_section *s = uci_to_section(e);
         if (strcmp(s->type, section)){
             continue;
         }
         count++;
-    }   
+    }
     uci_unload(ctx, pkg);
     return count;
 }
@@ -352,9 +352,9 @@ int fwx_uci_add_section(struct uci_context * ctx, char *package_name, char *sect
     ret = uci_add_section(ctx, p, section, &s);
     if (ret != UCI_OK)
         goto done;
-    ret = uci_save(ctx, p); 
+    ret = uci_save(ctx, p);
 done:
-    if (s) 
+    if (s)
         fprintf(stdout, "%s\n", s->e.name);
     return ret;
 }

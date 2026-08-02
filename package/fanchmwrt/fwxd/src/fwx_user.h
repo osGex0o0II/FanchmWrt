@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <sys/types.h>
 #include <libubox/list.h>
@@ -22,9 +22,9 @@
 #define MAX_NICKNAME_SIZE 64
 #define HOURS_PER_DAY 24
 #define TOP_APP_PER_HOUR 3
-#define MAX_DAILY_STAT_DAYS 30  
-#define MAX_TOP_APPS_PER_DAY 10  
-#define MAX_RECORD_DAY 30  
+#define MAX_DAILY_STAT_DAYS 30
+#define MAX_TOP_APPS_PER_DAY 10
+#define MAX_RECORD_DAY 30
 #define MAX_RECENT_APPS 5
 #define MAX_USER_RECORDS 4096
 
@@ -35,18 +35,18 @@ typedef struct visit_info
     u_int32_t first_time;
     u_int32_t latest_time;
     int action;
-    int expire; 
-    struct list_head visit; 
+    int expire;
+    struct list_head visit;
 
 } visit_info_t;
 
 
 typedef struct online_offline_record
 {
-    int type;  
-    u_int32_t timestamp;  
-    unsigned long long duration;  
-    struct list_head record; 
+    int type;
+    u_int32_t timestamp;
+    unsigned long long duration;
+    struct list_head record;
 } online_offline_record_t;
 
 typedef struct online_session_stat
@@ -62,7 +62,7 @@ typedef struct online_session_stat
 
 typedef struct user_record
 {
-    int action;  
+    int action;
     u_int32_t timestamp;
     char mac[MAX_MAC_LEN];
     char nickname[MAX_NICKNAME_SIZE];
@@ -79,37 +79,37 @@ typedef struct user_record
 
 typedef struct visit_stat
 {
-    int appid;  
-    unsigned long long total_time;  
-    struct list_head list;  
+    int appid;
+    unsigned long long total_time;
+    struct list_head list;
 } visit_stat_t;
 
 
 typedef struct global_app_type_record
 {
-    int app_type;  
-    unsigned long long time_delta;  
-    u_int32_t timestamp;  
-    struct list_head list;  
+    int app_type;
+    unsigned long long time_delta;
+    u_int32_t timestamp;
+    struct list_head list;
 } global_app_type_record_t;
 
 
 typedef struct traffic_stat
 {
-    unsigned long long up_bytes;    
-    unsigned long long down_bytes;  
+    unsigned long long up_bytes;
+    unsigned long long down_bytes;
 } traffic_stat_t;
 
 
 typedef struct daily_hourly_stat
 {
-    u_int32_t date;  
-    int is_today;    
-    
+    u_int32_t date;
+    int is_today;
+
     int hourly_top_apps[HOURS_PER_DAY][TOP_APP_PER_HOUR];
-    
+
     traffic_stat_t hourly_traffic[HOURS_PER_DAY];
-    
+
     unsigned long long hourly_online_time[HOURS_PER_DAY];
     unsigned long long hourly_active_time[HOURS_PER_DAY];
 } daily_hourly_stat_t;
@@ -117,12 +117,12 @@ typedef struct daily_hourly_stat
 
 typedef struct daily_top_apps_stat
 {
-    u_int32_t date;  
-    int is_today;    
-    int count;       
+    u_int32_t date;
+    int is_today;
+    int count;
     struct {
         int appid;
-        unsigned long long total_time;  
+        unsigned long long total_time;
     } apps[MAX_TOP_APPS_PER_DAY];
 } daily_top_apps_stat_t;
 
@@ -132,9 +132,9 @@ typedef struct client_node
 {
     char mac[MAX_MAC_LEN];
     char ip[MAX_IP_LEN];
-    char ipv6[128];  
-    unsigned int up_rate;  
-    unsigned int down_rate;  
+    char ipv6[128];
+    unsigned int up_rate;
+    unsigned int down_rate;
     int rssi;
     unsigned int rx_rate;
     unsigned int tx_rate;
@@ -149,21 +149,21 @@ typedef struct client_node
     u_int32_t offline_time;
     u_int32_t online_time;
     struct list_head online_visit;
-    struct list_head visit; 
-    struct list_head stat_list; 
-    struct list_head online_offline_records; 
+    struct list_head visit;
+    struct list_head stat_list;
+    struct list_head online_offline_records;
     int mf_user_loaded;
     char visiting_url[MAX_REPORT_URL_LEN];
     int visiting_app;
-    int active;  
+    int active;
     int last_online_state;
     int session_online_recorded;
     online_session_stat_t online_session;
-    
-    daily_hourly_stat_t daily_stats; 
-    
-    daily_top_apps_stat_t daily_top_apps_stats; 
-    struct list_head client; 
+
+    daily_hourly_stat_t daily_stats;
+
+    daily_top_apps_stat_t daily_top_apps_stats;
+    struct list_head client;
 
 } client_node_t;
 
@@ -181,7 +181,7 @@ struct app_visit_stat_info
 };
 typedef void (*iter_func)(void *arg, client_node_t *client);
 
-extern struct list_head client_list; 
+extern struct list_head client_list;
 extern struct list_head user_record_list;
 
 int get_timestamp(void);

@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +31,7 @@ char *str_trim(char *s) {
         len = last - start + 1;
         strncpy(s, start, len);
         s[len] = '\0';
-    }   
+    }
     return s;
 }
 
@@ -41,9 +41,9 @@ int exec_with_result_line(char *cmd, char *result, int len)
 	if (!cmd || !result || !len)
 		return -1;
     fp = popen(cmd, "r");
-    if (!fp) 
+    if (!fp)
         return -1;
-    fgets(result, len, fp);   
+    fgets(result, len, fp);
     str_trim(result);
     pclose(fp);
 	return 0;
@@ -54,7 +54,7 @@ int fwx_send_msg_to_kernel(char *buf){
     if (access("/dev/fwx", F_OK) != 0) {
         return 0; // Device doesn't exist, silently skip
     }
-    
+
     FILE *fp = fopen("/dev/fwx", "w");
     if (fp) {
         fprintf(fp, "%s", buf);
@@ -131,54 +131,54 @@ int fwx_parse_time_str(const char *time_str, fwx_time_period_t *periods, int max
     int period_count = 0;
     char *save_ptr1 = NULL;
     char *save_ptr2 = NULL;
-    
-    
+
+
     char time_str_copy[512] = {0};
     strncpy(time_str_copy, time_str, sizeof(time_str_copy) - 1);
-    
-    
+
+
     char *time_period = strtok_r(time_str_copy, " ", &save_ptr1);
     while (time_period && period_count < max_periods) {
         fwx_time_period_t *period = &periods[period_count];
         memset(period, 0, sizeof(fwx_time_period_t));
-        
+
         char start[16] = {0};
         char end[16] = {0};
         char weekdays[64] = {0};
-        
-        
+
+
         char *first_delim = strchr(time_period, '-');
         if (!first_delim) {
-            
+
             time_period = strtok_r(NULL, " ", &save_ptr1);
             continue;
         }
-        
-        
+
+
         strncpy(start, time_period, first_delim - time_period);
         start[first_delim - time_period] = '\0';
-        
-        
+
+
         char *second_delim = strchr(first_delim + 1, '-');
         if (second_delim) {
-            
+
             strncpy(end, first_delim + 1, second_delim - first_delim - 1);
             end[second_delim - first_delim - 1] = '\0';
             strncpy(weekdays, second_delim + 1, sizeof(weekdays) - 1);
         } else {
-            
+
             strncpy(end, first_delim + 1, sizeof(end) - 1);
         }
-        
-        
+
+
         strncpy(period->start_time, start, sizeof(period->start_time) - 1);
         strncpy(period->end_time, end, sizeof(period->end_time) - 1);
-        
-        
+
+
         if (strlen(weekdays) > 0) {
             char weekdays_copy[64] = {0};
             strncpy(weekdays_copy, weekdays, sizeof(weekdays_copy) - 1);
-            
+
             char *weekday_str = strtok_r(weekdays_copy, ",", &save_ptr2);
             while (weekday_str && period->weekday_count < MAX_WEEKDAYS) {
                 int weekday = atoi(weekday_str);
@@ -189,11 +189,11 @@ int fwx_parse_time_str(const char *time_str, fwx_time_period_t *periods, int max
                 weekday_str = strtok_r(NULL, ",", &save_ptr2);
             }
         }
-        
+
         period_count++;
         time_period = strtok_r(NULL, " ", &save_ptr1);
     }
-    
+
     return period_count;
 }
 
@@ -204,7 +204,7 @@ void update_fwx_proc_value(char *key, char *value){
     char old_value[128] = {0};
     sprintf(file_path, "/proc/sys/fwx/%s", key);
 
-    af_read_file_value(file_path, old_value, sizeof(old_value));    
+    af_read_file_value(file_path, old_value, sizeof(old_value));
     if (strcmp(old_value, value) != 0){
         sprintf(cmd_buf, "echo %s >/proc/sys/fwx/%s", value, key);
         system(cmd_buf);

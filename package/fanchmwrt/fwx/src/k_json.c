@@ -54,12 +54,12 @@ static void *cJSON_malloc(size_t sz) {
 	return kmalloc(sz, GFP_KERNEL);
 }
 
-static void *cJSON_realloc(void *ptr, size_t sz) 
+static void *cJSON_realloc(void *ptr, size_t sz)
 {
 	return krealloc(ptr, sz, GFP_KERNEL);
 }
 
-static void cJSON_free(void *ptr) 
+static void cJSON_free(void *ptr)
 {
 	 kfree(ptr);
 }
@@ -78,7 +78,7 @@ static char* cJSON_strdup(const char* str)
 #if 0
 void cJSON_InitHooks(cJSON_Hooks* hooks)
 {
-    if (!hooks) { 
+    if (!hooks) {
         cJSON_malloc = malloc;
         cJSON_realloc = realloc;
         cJSON_free = free;
@@ -120,9 +120,9 @@ static const char *parse_number(cJSON *item,const char *num)
 {
 	int n=0,sign=1;
 
-	if (*num=='-') sign=-1,num++;	
-	if (*num=='0') num++;			
-	if (*num>='1' && *num<='9')	do	n=(n*10)+(*num++ -'0');	while (*num>='0' && *num<='9');	
+	if (*num=='-') sign=-1,num++;
+	if (*num=='0') num++;
+	if (*num>='1' && *num<='9')	do	n=(n*10)+(*num++ -'0');	while (*num>='0' && *num<='9');
 	item->valueint=(int)n;
 	item->type=cJSON_Number;
 	return num;
@@ -145,12 +145,12 @@ static const char *parse_string(cJSON *item,const char *str)
 {
 	const char *ptr=str+1;char *ptr2;char *out;int len=0;unsigned uc;
 	if (*str!='\"') return 0;	// not a string!
-	
+
 	while (*ptr!='\"' && *ptr>31 && ++len) if (*ptr++ == '\\') ptr++;	// Skip escaped quotes.
-	
+
 	out=(char*)cJSON_malloc(len+1);	// This is how long we need for the string, roughly.
 	if (!out) return 0;
-	
+
 	ptr=str+1;ptr2=out;
 	while (*ptr!='\"' && *ptr>31)
 	{
@@ -168,7 +168,7 @@ static const char *parse_string(cJSON *item,const char *str)
 				case 'u':	 // transcode utf16 to utf8. DOES NOT SUPPORT SURROGATE PAIRS CORRECTLY.
 					sscanf(ptr+1,"%4x",&uc);	// get the unicode char.
 					len=3;if (uc<0x80) len=1;else if (uc<0x800) len=2;ptr2+=len;
-					
+
 					switch (len) {
 						case 3: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
 						case 2: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
@@ -192,9 +192,9 @@ static const char *parse_string(cJSON *item,const char *str)
 static char *print_string_ptr(const char *str)
 {
 	const char *ptr;char *ptr2,*out;int len=0;
-	
+
 	ptr=str;while (*ptr && ++len) {if (*ptr<32 || *ptr=='\"' || *ptr=='\\') len++;ptr++;}
-	
+
 	out=(char*)cJSON_malloc(len+3);
 	ptr2=out;ptr=str;
 	*ptr2++='\"';
@@ -238,7 +238,7 @@ static const char *skip(const char *in) {while (in && *in<=32) in++; return in;}
 cJSON *cJSON_Parse(const char *value)
 {
 	cJSON *c=cJSON_New_Item();
-	if (!c) return 0;       
+	if (!c) return 0;
 
 	if (!parse_value(c,skip(value))) {cJSON_Delete(c);return 0;}
 	return c;
@@ -312,7 +312,7 @@ static char *print_array(cJSON *item,int depth)
 {
 	char *out,*ptr,*ret;int len=5;
 	cJSON *child=item->child;
-	
+
 	out=(char*)cJSON_malloc(len);*out='[';
 	ptr=out+1;*ptr=0;
 	while (child)
@@ -328,7 +328,7 @@ static char *print_array(cJSON *item,int depth)
 		cJSON_free(ret);
 	}
 	*ptr++=']';*ptr++=0;
-	return out;	
+	return out;
 }
 
 
@@ -336,11 +336,11 @@ static const char *parse_object(cJSON *item,const char *value)
 {
 	cJSON *child;
 	if (*value!='{')	return 0;	// not an object!
-	
+
 	item->type=cJSON_Object;
 	value=skip(value+1);
 	if (*value=='}') return value+1;	// empty array.
-	
+
 	item->child=child=cJSON_New_Item();
 	value=skip(parse_string(child,skip(value)));
 	if (!value) return 0;
@@ -348,7 +348,7 @@ static const char *parse_object(cJSON *item,const char *value)
 	if (*value!=':') return 0;	// fail!
 	value=skip(parse_value(child,skip(value+1)));	// skip any spacing, get the value.
 	if (!value) return 0;
-	
+
 	while (*value==',')
 	{
 		cJSON *new_item;
@@ -358,12 +358,12 @@ static const char *parse_object(cJSON *item,const char *value)
 		if (!value) return 0;
 		child->string=child->valuestring;child->valuestring=0;
 		if (*value!=':') return 0;	// fail!
-		value=skip(parse_value(child,skip(value+1)));	// skip any spacing, get the value.		
+		value=skip(parse_value(child,skip(value+1)));	// skip any spacing, get the value.
 		if (!value) return 0;
 	}
-	
+
 	if (*value=='}') return value+1;	// end of array
-	return 0;	// malformed.	
+	return 0;	// malformed.
 }
 
 
@@ -371,7 +371,7 @@ static char *print_object(cJSON *item,int depth)
 {
 	char *out,*ptr,*ret,*str;int len=7,i;
 	cJSON *child=item->child;
-	
+
 	depth++;len+=depth;out=(char*)cJSON_malloc(len);*out='{';
 	ptr=out+1;*ptr++='\n';*ptr=0;
 	while (child)
@@ -394,7 +394,7 @@ static char *print_object(cJSON *item,int depth)
 	}
 	for (i=0;i<depth-1;i++) *ptr++='\t';
 	*ptr++='}';*ptr++=0;
-	return out;	
+	return out;
 }
 #define static_strlen(string_literal) (sizeof(string_literal) - sizeof(""))
 
@@ -489,7 +489,7 @@ void cJSON_Minify(char *json)
         }
     }
 
-    
+
     *into = '\0';
 }
 

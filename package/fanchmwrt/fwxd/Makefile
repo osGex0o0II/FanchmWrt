@@ -27,7 +27,7 @@ define Build/Compile
 	CFLAGS="$(TARGET_CFLAGS)" \
 	LIBS="$(TARGET_LDFLAGS) -lm -lpthread -lubox -luci -lubus -ljson-c -lblobmsg_json -lfwx_common -lsqlite3" \
 	all
-endef	
+endef
 
 
 define Build/Compile/Default
@@ -47,7 +47,7 @@ define Package/fwxd/install
 	$(INSTALL_DIR) $(1)/fwx_data
 	$(INSTALL_DIR) $(1)/fwx_root
 	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d/
-	$(CP) ./files/*.cfg $(1)/etc/fwxd/ 
+	$(CP) ./files/*.cfg $(1)/etc/fwxd/
 	$(INSTALL_BIN) ./files/uci-defaults/* $(1)/etc/uci-defaults/
 	$(INSTALL_BIN) ./files/fwx.init $(1)/etc/init.d/fwx
 	$(INSTALL_BIN) ./files/gen_class.sh $(1)/usr/bin

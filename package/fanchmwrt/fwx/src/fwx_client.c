@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 
 #include <linux/init.h>
@@ -172,7 +172,7 @@ nf_client_list_clear(void)
 			AF_DEBUG("clean mac:%s\n", mac_str);
 			stop_client_timer(p);
 			remove_client_proc_dir(p);
-			
+
 			spin_lock_bh(&p->visit_info_lock);
 			for (j = 0; j < MAX_VISIT_INFO_HASH_SIZE; j++) {
 				head = &p->visit_info_hash[j];
@@ -182,7 +182,7 @@ nf_client_list_clear(void)
 				}
 			}
 			spin_unlock_bh(&p->visit_info_lock);
-			
+
 			list_del(&(p->hlist));
 			kfree(p);
 		}
@@ -230,7 +230,7 @@ af_client_info_t *find_af_client(unsigned char *mac)
 		}
 	}
 	return NULL;
-}	
+}
 
 af_client_info_t *find_and_add_af_client(unsigned char *mac)
 {
@@ -240,7 +240,7 @@ af_client_info_t *find_and_add_af_client(unsigned char *mac)
 		nfc = nf_client_add(mac);
 	}
 	return nfc;
-}	
+}
 
 
 af_client_info_t *find_af_client_by_ip(unsigned int ip)
@@ -356,7 +356,7 @@ static app_visit_info_t *find_visit_info(af_client_info_t *node, unsigned int ap
 {
 	struct hlist_head *head;
 	app_visit_info_t *info;
-	
+
 	head = &node->visit_info_hash[get_app_id_hash_code(app_id)];
 	hlist_for_each_entry(info, head, hlist) {
 		if (info->app_id == app_id) {
@@ -369,21 +369,21 @@ static app_visit_info_t *find_visit_info(af_client_info_t *node, unsigned int ap
 app_visit_info_t *get_or_create_visit_info(af_client_info_t *node, unsigned int app_id)
 {
 	app_visit_info_t *info;
-	
+
 	info = find_visit_info(node, app_id);
 	if (info) {
 		return info;
 	}
-	
+
 	info = (app_visit_info_t *)kmalloc(sizeof(app_visit_info_t), GFP_ATOMIC);
 	if (!info) {
 		return NULL;
 	}
-	
+
 	memset(info, 0, sizeof(app_visit_info_t));
 	info->app_id = app_id;
 	INIT_HLIST_NODE(&info->hlist);
-	
+
 	hlist_add_head(&info->hlist, &node->visit_info_hash[get_app_id_hash_code(app_id)]);
 	return info;
 }
@@ -397,22 +397,22 @@ void flush_expired_visit_info(af_client_info_t *node)
 	struct hlist_head *head;
 	struct hlist_node *n;
 	app_visit_info_t *info;
-	
+
 	cur_timep = af_get_timestamp_sec();
-	
+
 	spin_lock_bh(&node->visit_info_lock);
 	for (i = 0; i < MAX_VISIT_INFO_HASH_SIZE; i++) {
 		head = &node->visit_info_hash[i];
 		hlist_for_each_entry_safe(info, n, head, hlist) {
 			if (count >= MAX_EXPIRED_VISIT_INFO_COUNT)
 				break;
-			
+
 			if (info->total_num > 3) {
 				timeout = 180;
 			} else {
 				timeout = 60;
 			}
-			
+
 			if (cur_timep - info->latest_time > timeout) {
 				hlist_del(&info->hlist);
 				spin_unlock_bh(&node->visit_info_lock);
@@ -434,12 +434,12 @@ void check_expired_visit_info(af_client_info_t *node)
 	struct hlist_head *head;
 	struct hlist_node *n;
 	app_visit_info_t *info;
-	
+
 	if (!node)
 		return;
-	
+
 	cur_timep = af_get_timestamp_sec();
-	
+
 	spin_lock_bh(&node->visit_info_lock);
 	for (i = 0; i < MAX_VISIT_INFO_HASH_SIZE; i++) {
 		head = &node->visit_info_hash[i];
@@ -459,7 +459,7 @@ static int compare_visit_info_count(const void *a, const void *b)
 {
 	const app_visit_info_t *info_a = *(const app_visit_info_t **)a;
 	const app_visit_info_t *info_b = *(const app_visit_info_t **)b;
-	
+
 	if (info_a->total_num > info_b->total_num)
 		return -1;
 	else if (info_a->total_num < info_b->total_num)
@@ -515,7 +515,7 @@ int __af_visit_info_report(af_client_info_t *node)
 			info->total_num = 0; //clean all
 		}
 	}
-	
+
 	if (total_count > 0) {
 		sort(info_array, total_count, sizeof(app_visit_info_t *), compare_visit_info_count, NULL);
 		report_count = total_count > g_max_app_report_count ? g_max_app_report_count : total_count;
@@ -570,8 +570,8 @@ void af_update_client_status(af_client_info_t *node)
 	}
 	if (node->last_flow.up_bytes > 0){
 		node->period_flow.up_bytes += (node->flow.up_bytes - node->last_flow.up_bytes);
-	}	
-	AF_LMT_DEBUG("period flow down:%llu up: %llu pkg up %d\n", node->period_flow.down_bytes, 
+	}
+	AF_LMT_DEBUG("period flow down:%llu up: %llu pkg up %d\n", node->period_flow.down_bytes,
 		node->period_flow.up_bytes, node->rate.pkt_up_rate);
 
 	node->rate.up_rate = (node->flow.up_bytes - node->last_flow.up_bytes) >> 1;
@@ -676,7 +676,7 @@ static u_int32_t af_client_hook(unsigned int hook,
 		if (skb->protocol == htons(ETH_P_IP)) {
 			iph = ip_hdr(skb);
 			if (iph && nfc->ip != iph->saddr) {
-				AF_DEBUG("update node " MAC_FMT " ipv4 %pI4--->%pI4\n", 
+				AF_DEBUG("update node " MAC_FMT " ipv4 %pI4--->%pI4\n",
 					MAC_ARRAY(nfc->mac), &nfc->ip, &iph->saddr);
 				nfc->ip = iph->saddr;
 			}
@@ -689,11 +689,11 @@ static u_int32_t af_client_hook(unsigned int hook,
 		}
 		nfc->flow.up_bytes += skb->len;
 		nfc->flow.up_pkts++;
-		nfc->update_jiffies = jiffies;  
+		nfc->update_jiffies = jiffies;
 	}
 
 	AF_CLIENT_UNLOCK_W();
-	
+
 	return NF_ACCEPT;
 }
 
@@ -749,7 +749,7 @@ static u_int32_t af_client_hook2(unsigned int hook,
 		return NF_ACCEPT;
 
 	AF_CLIENT_LOCK_R();
-	
+
 	if (skb->protocol == htons(ETH_P_IP)) {
 		iph = ip_hdr(skb);
 		nfc = find_af_client_by_ip(iph->daddr);
@@ -767,7 +767,7 @@ static u_int32_t af_client_hook2(unsigned int hook,
 	if (nfc){
 		nfc->flow.down_bytes += skb->len;
 		nfc->flow.down_pkts++;
-		nfc->update_jiffies = jiffies;  
+		nfc->update_jiffies = jiffies;
 	}
 
 	AF_CLIENT_UNLOCK_R();
@@ -827,7 +827,7 @@ static void client_timer_handler(unsigned long data)
         AF_ERROR("client timer handler: invalid client\n");
         return;
     }
-    
+
     if (client->timer_count >= 30) {
         __af_visit_info_report(client);
 		client->timer_count = 0;
@@ -836,7 +836,7 @@ static void client_timer_handler(unsigned long data)
     check_expired_visit_info(client);
     af_update_client_status(client);
 	client->timer_count++;
-    mod_timer(&client->client_timer, jiffies + HZ * 2); 
+    mod_timer(&client->client_timer, jiffies + HZ * 2);
 }
 
  void init_client_timer(af_client_info_t *client)
@@ -845,24 +845,24 @@ static void client_timer_handler(unsigned long data)
         AF_ERROR("init_client_timer: invalid client\n");
         return;
     }
-    
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
     timer_setup(&client->client_timer, client_timer_handler, 0);
 #else
     setup_timer(&client->client_timer, client_timer_handler, (unsigned long)client);
 #endif
-    
-    mod_timer(&client->client_timer, jiffies + HZ * 1); 
+
+    mod_timer(&client->client_timer, jiffies + HZ * 1);
 }
 
  void stop_client_timer(af_client_info_t *client)
 {
-	
+
     if (!client) {
         AF_ERROR("stop_client_timer: invalid client\n");
         return;
     }
-    
+
     del_timer_sync(&client->client_timer);
 }
 

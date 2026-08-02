@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #ifndef __FWX_CONFIG_H__
 #define __FWX_CONFIG_H__
@@ -31,4 +31,3 @@ int config_get_appfilter_enable(void);
 int config_get_lan_ip(char *lan_ip, int len);
 int config_get_lan_mask(char *lan_mask, int len);
 #endif
-

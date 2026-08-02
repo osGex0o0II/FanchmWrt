@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <unistd.h>
 #include <stdlib.h>
@@ -34,17 +34,17 @@ LIST_HEAD(user_record_list);
 int g_cur_user_num = 0;
 
 
-static int g_app_valid_time = 300; 
+static int g_app_valid_time = 300;
 
 unsigned long long g_daily_type_stats[MAX_APP_TYPE] = {0};
-u_int32_t g_daily_stat_date = 0;  
+u_int32_t g_daily_stat_date = 0;
 
 
 LIST_HEAD(global_hourly_records);
 
 
 traffic_stat_t g_global_hourly_traffic[HOURS_PER_DAY] = {{0}};
-u_int32_t g_global_traffic_date = 0;  
+u_int32_t g_global_traffic_date = 0;
 
 
 #define CLIENT_DATA_BASE_DIR_DEFAULT "/tmp/fwx/client_data"
@@ -1317,24 +1317,24 @@ static int find_oldest_date_in_dir(const char *dir_path, char *oldest_date, size
         while ((client_entry = readdir(base_dir)) != NULL) {
             if (client_entry->d_name[0] == '.')
                 continue;
-            
+
             char client_dir[512] = {0};
             snprintf(client_dir, sizeof(client_dir), "%s/%s", dir_path, client_entry->d_name);
-            
+
             struct stat st;
             if (stat(client_dir, &st) != 0 || !S_ISDIR(st.st_mode))
                 continue;
-            
+
             char stats_dir[512] = {0};
             snprintf(stats_dir, sizeof(stats_dir), "%s/stats", client_dir);
-            
+
             DIR *stats_d = opendir(stats_dir);
             if (stats_d) {
                 struct dirent *file_entry;
                 while ((file_entry = readdir(stats_d)) != NULL) {
                     if (file_entry->d_name[0] == '.')
                         continue;
-                    
+
                     char date_str[32] = {0};
                     if (extract_date_from_filename(file_entry->d_name, date_str, sizeof(date_str)) == 0) {
                         if (!found || strcmp(date_str, oldest) < 0) {
@@ -1345,21 +1345,21 @@ static int find_oldest_date_in_dir(const char *dir_path, char *oldest_date, size
                 }
                 closedir(stats_d);
             }
-            
+
             char visits_dir[512] = {0};
             snprintf(visits_dir, sizeof(visits_dir), "%s/visits", client_dir);
-            
+
             DIR *visits_d = opendir(visits_dir);
             if (visits_d) {
                 struct dirent *file_entry;
                 while ((file_entry = readdir(visits_d)) != NULL) {
                     if (file_entry->d_name[0] == '.')
                         continue;
-                    
+
                     char date_str[32] = {0};
                     if (extract_date_from_filename(file_entry->d_name, date_str, sizeof(date_str)) != 0)
                         continue;
-                    
+
                     if (strlen(date_str) > 0) {
                         if (!found || strcmp(date_str, oldest) < 0) {
                             strncpy(oldest, date_str, sizeof(oldest) - 1);
@@ -1370,20 +1370,20 @@ static int find_oldest_date_in_dir(const char *dir_path, char *oldest_date, size
                 closedir(visits_d);
             }
         }
-        
+
         closedir(base_dir);
     }
-    
+
     char global_stats_dir[512] = {0};
     snprintf(global_stats_dir, sizeof(global_stats_dir), "%s/global/stats", get_history_data_root_dir());
-    
+
     DIR *global_stats_d = opendir(global_stats_dir);
     if (global_stats_d) {
         struct dirent *file_entry;
         while ((file_entry = readdir(global_stats_d)) != NULL) {
             if (file_entry->d_name[0] == '.')
                 continue;
-            
+
             char date_str[32] = {0};
             if (extract_date_from_filename(file_entry->d_name, date_str, sizeof(date_str)) == 0) {
                 if (!found || strcmp(date_str, oldest) < 0) {
@@ -1404,13 +1404,13 @@ static int find_oldest_date_in_dir(const char *dir_path, char *oldest_date, size
             }
         }
     }
-    
+
     if (found) {
         strncpy(oldest_date, oldest, date_len - 1);
         oldest_date[date_len - 1] = '\0';
         return 0;
     }
-    
+
     return -1;
 }
 
@@ -1420,31 +1420,31 @@ static void delete_date_files(const char *date_str) {
         delete_visit_records_by_date(date_str);
         return;
     }
-    
+
     struct dirent *client_entry;
     while ((client_entry = readdir(base_dir)) != NULL) {
         if (client_entry->d_name[0] == '.')
             continue;
-        
+
         char client_dir[512] = {0};
         snprintf(client_dir, sizeof(client_dir), "%s/%s", get_client_data_base_dir(), client_entry->d_name);
-        
+
         struct stat st;
         if (stat(client_dir, &st) != 0 || !S_ISDIR(st.st_mode))
             continue;
-        
+
         char stats_dir[512] = {0};
         snprintf(stats_dir, sizeof(stats_dir), "%s/stats", client_dir);
-        
+
         DIR *stats_d = opendir(stats_dir);
         if (!stats_d)
             continue;
-        
+
         struct dirent *file_entry;
         while ((file_entry = readdir(stats_d)) != NULL) {
             if (file_entry->d_name[0] == '.')
                 continue;
-            
+
             char file_date[32] = {0};
             if (extract_date_from_filename(file_entry->d_name, file_date, sizeof(file_date)) == 0) {
                 if (strcmp(file_date, date_str) == 0) {
@@ -1455,22 +1455,22 @@ static void delete_date_files(const char *date_str) {
             }
         }
         closedir(stats_d);
-        
+
         char visits_dir[512] = {0};
         snprintf(visits_dir, sizeof(visits_dir), "%s/visits", client_dir);
-        
+
         DIR *visits_d = opendir(visits_dir);
         if (!visits_d)
             continue;
-        
+
         while ((file_entry = readdir(visits_d)) != NULL) {
             if (file_entry->d_name[0] == '.')
                 continue;
-            
+
             char file_date[32] = {0};
             if (extract_date_from_filename(file_entry->d_name, file_date, sizeof(file_date)) != 0)
                 continue;
-            
+
             if (strcmp(file_date, date_str) == 0) {
                 char file_path[512] = {0};
                 snprintf(file_path, sizeof(file_path), "%s/%s", visits_dir, file_entry->d_name);
@@ -1479,7 +1479,7 @@ static void delete_date_files(const char *date_str) {
         }
         closedir(visits_d);
     }
-    
+
     closedir(base_dir);
     delete_visit_records_by_date(date_str);
 }
@@ -1488,47 +1488,47 @@ static void cleanup_expired_files_by_days(void) {
     struct uci_context *uci_ctx = uci_alloc_context();
     if (!uci_ctx)
         return;
-    
+
     int record_time = fwx_uci_get_int_value(uci_ctx, "fwx.record.record_time");
     uci_free_context(uci_ctx);
     LOG_INFO("cleanup_expired_files_by_days: record_time: %d\n", record_time);
     if (record_time <= 0) {
         return;
     }
-    
+
     time_t now = time(NULL);
     u_int32_t expire_timestamp = (u_int32_t)now - (record_time * SECONDS_PER_DAY);
     int deleted_count = 0;
     deleted_count += delete_expired_visit_records(expire_timestamp);
-    
+
     DIR *base_dir = opendir(get_client_data_base_dir());
     if (!base_dir) {
         return;
     }
-    
+
     struct dirent *client_entry;
-    
+
     while ((client_entry = readdir(base_dir)) != NULL) {
         if (client_entry->d_name[0] == '.')
             continue;
-        
+
         char client_dir[512] = {0};
         snprintf(client_dir, sizeof(client_dir), "%s/%s", get_client_data_base_dir(), client_entry->d_name);
-        
+
         struct stat st;
         if (stat(client_dir, &st) != 0 || !S_ISDIR(st.st_mode))
             continue;
-        
+
         char stats_dir[512] = {0};
         snprintf(stats_dir, sizeof(stats_dir), "%s/stats", client_dir);
-        
+
         DIR *stats_d = opendir(stats_dir);
         if (stats_d) {
             struct dirent *file_entry;
             while ((file_entry = readdir(stats_d)) != NULL) {
                 if (file_entry->d_name[0] == '.')
                     continue;
-                
+
                 char date_str[32] = {0};
                 if (extract_date_from_filename(file_entry->d_name, date_str, sizeof(date_str)) == 0) {
                     u_int32_t file_date = parse_date_string(date_str);
@@ -1543,21 +1543,21 @@ static void cleanup_expired_files_by_days(void) {
             }
             closedir(stats_d);
         }
-        
+
         char visits_dir[512] = {0};
         snprintf(visits_dir, sizeof(visits_dir), "%s/visits", client_dir);
-        
+
         DIR *visits_d = opendir(visits_dir);
         if (visits_d) {
             struct dirent *file_entry;
             while ((file_entry = readdir(visits_d)) != NULL) {
                 if (file_entry->d_name[0] == '.')
                     continue;
-                
+
                 char file_date[32] = {0};
                 if (extract_date_from_filename(file_entry->d_name, file_date, sizeof(file_date)) != 0)
                     continue;
-                
+
                 u_int32_t file_date_ts = parse_date_string(file_date);
                 if (file_date_ts > 0 && file_date_ts < expire_timestamp) {
                     char file_path[512] = {0};
@@ -1570,19 +1570,19 @@ static void cleanup_expired_files_by_days(void) {
             closedir(visits_d);
         }
     }
-    
+
     closedir(base_dir);
-    
+
     char global_stats_dir[512] = {0};
     snprintf(global_stats_dir, sizeof(global_stats_dir), "%s/global/stats", get_history_data_root_dir());
-    
+
     DIR *global_stats_d = opendir(global_stats_dir);
     if (global_stats_d) {
         struct dirent *file_entry;
         while ((file_entry = readdir(global_stats_d)) != NULL) {
             if (file_entry->d_name[0] == '.')
                 continue;
-            
+
             char date_str[32] = {0};
             if (extract_date_from_filename(file_entry->d_name, date_str, sizeof(date_str)) == 0) {
                 u_int32_t file_date = parse_date_string(date_str);
@@ -1597,7 +1597,7 @@ static void cleanup_expired_files_by_days(void) {
         }
         closedir(global_stats_d);
     }
-    
+
     if (deleted_count > 0) {
         LOG_INFO("Cleaned up %d expired files (record_time: %d days)\n", deleted_count, record_time);
     }
@@ -1609,15 +1609,15 @@ void check_and_cleanup_history_data_by_size(void) {
     struct uci_context *uci_ctx = uci_alloc_context();
     if (!uci_ctx)
         return;
-    
+
     char history_data_size[64] = {0};
     fwx_uci_get_value(uci_ctx, "fwx.record.history_data_size", history_data_size, sizeof(history_data_size));
     uci_free_context(uci_ctx);
-    
+
     if (strlen(history_data_size) == 0) {
         return;
     }
-    
+
     char *endptr = NULL;
     long max_size_mb = strtol(history_data_size, &endptr, 10);
     if (*endptr != '\0' || max_size_mb <= 0) {
@@ -1777,7 +1777,7 @@ client_node_t *add_client_node(char *mac)
     node->wifi_ifname[0] = '\0';
     node->is_wireless = 0;
     node->wireless_online = 0;
-    node->active = 0;  
+    node->active = 0;
     node->last_online_state = 0;
     node->session_online_recorded = 0;
     reset_online_session_stat(node, now);
@@ -1799,7 +1799,7 @@ client_node_t *add_client_node(char *mac)
             node->daily_stats.hourly_top_apps[j][k] = -1;
         }
     }
-    
+
 
     node->daily_top_apps_stats.date = today;
     node->daily_top_apps_stats.is_today = 1;
@@ -1824,7 +1824,7 @@ client_node_t *find_client_node(const char *mac)
         return NULL;
     }
     normalize_mac_lower(mac, mac_norm, sizeof(mac_norm));
-    
+
     list_for_each_entry(p, &client_list, client) {
         if (0 == strcasecmp(p->mac, mac_norm))
         {
@@ -1846,7 +1846,7 @@ void client_foreach(void *arg, iter_func iter)
     LOG_DEBUG("client_foreach: Starting iteration over client_list...\n");
     list_for_each_entry(node, &client_list, client) {
         count++;
-        LOG_DEBUG("client_foreach: Processing client[%d] - mac=%s, online=%d\n", 
+        LOG_DEBUG("client_foreach: Processing client[%d] - mac=%s, online=%d\n",
                count, node->mac, node->online);
         iter(arg, node);
     }
@@ -1924,7 +1924,7 @@ void update_client_nickname(void)
 
         fwx_uci_get_array_value(uci_ctx, "user_info.@user_info[%d].nickname", i, nickname_buf, sizeof(nickname_buf));
         strncpy(node->nickname, nickname_buf, sizeof(node->nickname));
-    }   
+    }
     uci_free_context(uci_ctx);
 }
 
@@ -2334,7 +2334,7 @@ void update_client_from_kernel(void)
             }
         }
         LOG_DEBUG("update_client_from_kernel: parsed = %d, line_buf = %s\n", parsed, line_buf);
-        if (parsed < 3) 
+        if (parsed < 3)
         {
             printf("invalid line format:%s\n", line_buf);
             continue;
@@ -2362,7 +2362,7 @@ void update_client_from_kernel(void)
         }
         else
         {
-            node->ipv6[0] = '\0'; 
+            node->ipv6[0] = '\0';
         }
 
         if (parsed >= 5)
@@ -2524,13 +2524,13 @@ void move_expired_online_visit_to_offline(void)
             if (diff > ONLINE_VISIT_TIMEOUT_SEC) {
                 list_del(&p_info->visit);
                 LOG_INFO("move_expired_online_visit_to_offline: mac = %s, appid = %d, action = %d, first_time = %d, latest_time = %d\n", node->mac, p_info->appid, p_info->action, p_info->first_time, p_info->latest_time);
-                
+
 
                 int total_time = p_info->latest_time - p_info->first_time;
                 if (total_time < g_app_valid_time) {
-                    LOG_DEBUG("Discard visit record (too short): mac=%s, appid=%d, duration=%ds < %ds\n", 
+                    LOG_DEBUG("Discard visit record (too short): mac=%s, appid=%d, duration=%ds < %ds\n",
                               node->mac, p_info->appid, total_time, g_app_valid_time);
-                    free(p_info); 
+                    free(p_info);
                 } else {
                     p_info->expire = 0;
                     add_visit_info_node(&node->visit, p_info);
@@ -2560,14 +2560,14 @@ void update_client_visiting_info(void){
     char url_buf[MAX_REPORT_URL_LEN] = {0};
     char app_buf[32] = {0};
 
-    FILE *fp = fopen("/proc/net/af_visit", "r");    
+    FILE *fp = fopen("/proc/net/af_visit", "r");
     if (!fp)
     {
         printf("open af_visit file....failed\n");
         return;
     }
     fgets(line_buf, sizeof(line_buf), fp); // title
-    while (fgets(line_buf, sizeof(line_buf), fp))   
+    while (fgets(line_buf, sizeof(line_buf), fp))
     {
         memset(mac_buf, 0, sizeof(mac_buf));
         memset(app_buf, 0, sizeof(app_buf));
@@ -2611,10 +2611,10 @@ void dump_client_list(void)
     {
         return;
     }
-  
-    fprintf(fp, "%-4s %-20s %-20s %-32s %-8s %-12s %-12s\n", 
+
+    fprintf(fp, "%-4s %-20s %-20s %-32s %-8s %-12s %-12s\n",
             "Id", "Mac Addr", "Ip Addr", "Hostname", "Online", "OnlineTime", "OfflineTime");
-    
+
 
     client_node_t *node = NULL;
     list_for_each_entry(node, &client_list, client) {
@@ -2629,14 +2629,14 @@ void dump_client_list(void)
             else
                 strcpy(ip_buf, node->ip);
             fprintf(fp, "%-4d %-20s %-20s %-32s %-8d %-12u %-12u\n",
-                    count + 1, node->mac, ip_buf, hostname_buf, node->online, 
+                    count + 1, node->mac, ip_buf, hostname_buf, node->online,
                     node->online_time, node->offline_time);
             count++;
             if (count >= MAX_SUPPORT_DEV_NUM)
                 goto EXIT;
         }
     }
-    
+
 
     list_for_each_entry(node, &client_list, client) {
         if (node->online == 0)
@@ -2724,7 +2724,7 @@ void dump_client_visit_list(void)
 
     fprintf(fp, "%-4s %-20s %-20s %-8s %-32s %-32s %-32s %-8s\n", "Id", "Mac Addr",
             "Ip Addr", "Appid", "First Time", "Latest Time", "Total Time(s)", "Expire");
-    
+
     client_node_t *node = NULL;
     visit_info_t *p_info = NULL;
     list_for_each_entry(node, &client_list, client) {
@@ -2950,33 +2950,33 @@ daily_hourly_stat_t *get_today_stat(client_node_t *client) {
 	int i, j;
     if (!client)
         return NULL;
-    
+
     u_int32_t today = get_today_start_timestamp();
-    
-    
+
+
     if (client->daily_stats.date == today && client->daily_stats.is_today == 1) {
         return &client->daily_stats;
     }
-    
-    
+
+
     if (client->daily_stats.date != 0 && client->daily_stats.date != today) {
         save_daily_stats_to_file(client, client->daily_stats.date);
     }
-    
-    
+
+
     client->daily_stats.date = today;
     client->daily_stats.is_today = 1;
     for (i = 0; i < HOURS_PER_DAY; i++) {
         for (j = 0; j < TOP_APP_PER_HOUR; j++) {
             client->daily_stats.hourly_top_apps[i][j] = -1;
         }
-        
+
         client->daily_stats.hourly_traffic[i].up_bytes = 0;
         client->daily_stats.hourly_traffic[i].down_bytes = 0;
         client->daily_stats.hourly_online_time[i] = 0;
         client->daily_stats.hourly_active_time[i] = 0;
     }
-    
+
     return &client->daily_stats;
 }
 
@@ -2984,9 +2984,9 @@ daily_hourly_stat_t *get_today_stat(client_node_t *client) {
 daily_hourly_stat_t *load_history_stat_from_file(client_node_t *client, u_int32_t date) {
     if (!client)
         return NULL;
-    
-    
-    
+
+
+
     return NULL;
 }
 
@@ -2995,7 +2995,7 @@ void update_hourly_top_apps(client_node_t *client) {
     if (!client)
         return;
 
-    
+
     daily_hourly_stat_t *today_stat = get_today_stat(client);
     if (!today_stat)
         return;
@@ -3005,7 +3005,7 @@ void update_hourly_top_apps(client_node_t *client) {
     int hour_count[HOURS_PER_DAY] = {0};
     int i, j;
 
-    
+
     for (i = 0; i < HOURS_PER_DAY; i++) {
         hour_count[i] = 0;
         for (j = 0; j < MAX_APP_STAT_NUM; j++) {
@@ -3014,7 +3014,7 @@ void update_hourly_top_apps(client_node_t *client) {
         }
     }
 
-    
+
     visit_info_t *p_info = NULL;
     list_for_each_entry(p_info, &client->online_visit, visit) {
         if (!is_same_day(p_info->first_time, cur_time))
@@ -3023,15 +3023,15 @@ void update_hourly_top_apps(client_node_t *client) {
     }
 
     list_for_each_entry(p_info, &client->visit, visit) {
-        
+
         if (!is_same_day(p_info->first_time, cur_time))
             continue;
         accumulate_visit_to_hour_stats(hour_stats, hour_count, p_info);
     }
 
-    
+
     for (i = 0; i < HOURS_PER_DAY; i++) {
-        
+
         for (j = 0; j < TOP_APP_PER_HOUR; j++) {
             today_stat->hourly_top_apps[i][j] = -1;
         }
@@ -3039,10 +3039,10 @@ void update_hourly_top_apps(client_node_t *client) {
         if (hour_count[i] == 0)
             continue;
 
-        
+
         qsort(hour_stats[i], hour_count[i], sizeof(app_hour_stat_t), compare_app_stat);
 
-        
+
         int top_count = (hour_count[i] < TOP_APP_PER_HOUR) ? hour_count[i] : TOP_APP_PER_HOUR;
         for (j = 0; j < top_count; j++) {
             if (hour_stats[i][j].appid > 0 && hour_stats[i][j].total_time > 0) {
@@ -3067,7 +3067,7 @@ void get_hourly_top_apps(client_node_t *client, int hour, int *appids, int max_c
     for (i = 0; i < count; i++) {
         appids[i] = today_stat->hourly_top_apps[hour][i];
     }
-    
+
     for (i = count; i < max_count; i++) {
         appids[i] = -1;
     }
@@ -3079,52 +3079,52 @@ void save_daily_stats_to_file(client_node_t *client, u_int32_t date) {
 	int hour;
     if (!client)
         return;
-    
+
     daily_hourly_stat_t *stat = &client->daily_stats;
     if (stat->date != date) {
         char date_str[32] = {0};
         char stat_date_str[32] = {0};
         get_date_string(date, date_str, sizeof(date_str));
         get_date_string(stat->date, stat_date_str, sizeof(stat_date_str));
-        LOG_DEBUG("Date mismatch for client %s hourly stats: requested %s, but stat date is %s, skip saving\n", 
+        LOG_DEBUG("Date mismatch for client %s hourly stats: requested %s, but stat date is %s, skip saving\n",
                  client->mac, date_str, stat_date_str);
-        return;  
+        return;
     }
-    
-    
+
+
     char stats_dir[512] = {0};
     char mac_dirname[64] = {0};
     mac_to_dirname(client->mac, mac_dirname, sizeof(mac_dirname));
     snprintf(stats_dir, sizeof(stats_dir), "%s/%s/stats", get_client_data_base_dir(), mac_dirname);
-    
+
     if (ensure_dir_exists(stats_dir) != 0) {
         char date_str[32] = {0};
         get_date_string(date, date_str, sizeof(date_str));
-        LOG_ERROR("Failed to create stats directory %s for client %s hourly stats (date: %s)\n", 
+        LOG_ERROR("Failed to create stats directory %s for client %s hourly stats (date: %s)\n",
                   stats_dir, client->mac, date_str);
         return;
     }
-    
-    
+
+
     char date_str[32] = {0};
     get_date_string(date, date_str, sizeof(date_str));
-    
+
     char file_path[512] = {0};
     snprintf(file_path, sizeof(file_path), "%s/hourly_%s.json", stats_dir, date_str);
-    
-    
+
+
     struct json_object *json_obj = json_object_new_object();
     json_object_object_add(json_obj, "date", json_object_new_int64(date));
     json_object_object_add(json_obj, "mac", json_object_new_string(client->mac));
-    
-    
+
+
     struct json_object *hourly_array = json_object_new_array();
     for (hour = 0; hour < HOURS_PER_DAY; hour++) {
         struct json_object *hour_obj = json_object_new_object();
         struct json_object *apps_array = json_object_new_array();
-        
+
         json_object_object_add(hour_obj, "hour", json_object_new_int(hour));
-        
+
         for (i = 0; i < TOP_APP_PER_HOUR; i++) {
             if (stat->hourly_top_apps[hour][i] > 0) {
                 struct json_object *app_obj = json_object_new_object();
@@ -3136,25 +3136,25 @@ void save_daily_stats_to_file(client_node_t *client, u_int32_t date) {
                 json_object_array_add(apps_array, app_obj);
             }
         }
-        
+
         json_object_object_add(hour_obj, "apps", apps_array);
-        
-        
+
+
         struct json_object *traffic_obj = json_object_new_object();
         json_object_object_add(traffic_obj, "up_bytes", json_object_new_int64(stat->hourly_traffic[hour].up_bytes));
         json_object_object_add(traffic_obj, "down_bytes", json_object_new_int64(stat->hourly_traffic[hour].down_bytes));
         json_object_object_add(hour_obj, "traffic", traffic_obj);
-        
-        
+
+
         json_object_object_add(hour_obj, "online_time", json_object_new_int64(stat->hourly_online_time[hour]));
         json_object_object_add(hour_obj, "active_time", json_object_new_int64(stat->hourly_active_time[hour]));
-        
+
         json_object_array_add(hourly_array, hour_obj);
     }
-    
+
     json_object_object_add(json_obj, "hourly_stats", hourly_array);
-    
-    
+
+
     const char *json_string = json_object_to_json_string_ext(json_obj, JSON_C_TO_STRING_PRETTY);
     FILE *fp = fopen(file_path, "w");
     if (fp) {
@@ -3162,12 +3162,12 @@ void save_daily_stats_to_file(client_node_t *client, u_int32_t date) {
         fclose(fp);
         char date_str[32] = {0};
         get_date_string(date, date_str, sizeof(date_str));
-        LOG_DEBUG("Saved daily hourly stats for client %s (date: %s) to %s\n", 
+        LOG_DEBUG("Saved daily hourly stats for client %s (date: %s) to %s\n",
                  client->mac, date_str, file_path);
     } else {
         LOG_ERROR("Failed to save daily stats to file: %s (errno: %d)\n", file_path, errno);
     }
-    
+
     json_object_put(json_obj);
 }
 
@@ -3177,12 +3177,12 @@ static u_int32_t get_today_start_timestamp_from_ts(u_int32_t timestamp) {
     struct tm *tm_info = localtime(&t);
     if (!tm_info)
         return 0;
-    
+
     struct tm tm_day_start = *tm_info;
     tm_day_start.tm_hour = 0;
     tm_day_start.tm_min = 0;
     tm_day_start.tm_sec = 0;
-    
+
     return (u_int32_t)mktime(&tm_day_start);
 }
 
@@ -3190,20 +3190,20 @@ static u_int32_t get_today_start_timestamp_from_ts(u_int32_t timestamp) {
 void add_online_offline_record(client_node_t *client, int type, u_int32_t timestamp, unsigned long long duration) {
     if (!client)
         return;
-    
+
     online_offline_record_t *record = (online_offline_record_t *)calloc(1, sizeof(online_offline_record_t));
     if (!record) {
         LOG_ERROR("Failed to allocate memory for online_offline_record\n");
         return;
     }
-    
+
     record->type = type;
     record->timestamp = timestamp;
     record->duration = duration;
-    
+
 
     list_add(&record->record, &client->online_offline_records);
-    
+
     LOG_DEBUG("Added %s record for client %s at timestamp %u, duration: %llu seconds\n",
              type == 0 ? "online" : "offline", client->mac, timestamp, duration);
 }
@@ -3212,41 +3212,41 @@ void add_online_offline_record(client_node_t *client, int type, u_int32_t timest
 void save_online_offline_records_to_file(client_node_t *client, u_int32_t date) {
     if (!client)
         return;
-    
-    
+
+
     char stats_dir[512] = {0};
     char mac_dirname[64] = {0};
     mac_to_dirname(client->mac, mac_dirname, sizeof(mac_dirname));
     snprintf(stats_dir, sizeof(stats_dir), "%s/%s/stats", get_client_data_base_dir(), mac_dirname);
-    
+
     if (ensure_dir_exists(stats_dir) != 0) {
         char date_str[32] = {0};
         get_date_string(date, date_str, sizeof(date_str));
-        LOG_ERROR("Failed to create stats directory %s for client %s online_offline records (date: %s)\n", 
+        LOG_ERROR("Failed to create stats directory %s for client %s online_offline records (date: %s)\n",
                   stats_dir, client->mac, date_str);
         return;
     }
-    
-    
+
+
     char date_str[32] = {0};
     get_date_string(date, date_str, sizeof(date_str));
-    
+
     char file_path[512] = {0};
     snprintf(file_path, sizeof(file_path), "%s/online_offline_%s.json", stats_dir, date_str);
-    
-    
+
+
     struct json_object *json_obj = json_object_new_object();
     json_object_object_add(json_obj, "date", json_object_new_int64(date));
     json_object_object_add(json_obj, "mac", json_object_new_string(client->mac));
-    
-    
+
+
     struct json_object *records_array = json_object_new_array();
     online_offline_record_t *record = NULL;
     u_int32_t date_end = date + SECONDS_PER_DAY - 1;
-    
-    
+
+
     list_for_each_entry(record, &client->online_offline_records, record) {
-        
+
         if (record->timestamp >= date && record->timestamp <= date_end) {
             struct json_object *record_obj = json_object_new_object();
             json_object_object_add(record_obj, "type", json_object_new_int(record->type));
@@ -3255,10 +3255,10 @@ void save_online_offline_records_to_file(client_node_t *client, u_int32_t date) 
             json_object_array_add(records_array, record_obj);
         }
     }
-    
+
     json_object_object_add(json_obj, "records", records_array);
-    
-    
+
+
     const char *json_string = json_object_to_json_string_ext(json_obj, JSON_C_TO_STRING_PRETTY);
     FILE *fp = fopen(file_path, "w");
     if (fp) {
@@ -3266,12 +3266,12 @@ void save_online_offline_records_to_file(client_node_t *client, u_int32_t date) 
         fclose(fp);
         char date_str[32] = {0};
         get_date_string(date, date_str, sizeof(date_str));
-        LOG_DEBUG("Saved online_offline records for client %s (date: %s) to %s\n", 
+        LOG_DEBUG("Saved online_offline records for client %s (date: %s) to %s\n",
                  client->mac, date_str, file_path);
     } else {
         LOG_ERROR("Failed to save online_offline records to file: %s (errno: %d)\n", file_path, errno);
     }
-    
+
     json_object_put(json_obj);
 }
 
@@ -3279,25 +3279,25 @@ void save_online_offline_records_to_file(client_node_t *client, u_int32_t date) 
 void archive_and_save_online_offline_records(void) {
     client_node_t *client = NULL;
     u_int32_t today = get_today_start_timestamp();
-    
+
     list_for_each_entry(client, &client_list, client) {
-        
+
         online_offline_record_t *record = NULL;
         u_int32_t oldest_date = 0;
-        
-        
+
+
         list_for_each_entry(record, &client->online_offline_records, record) {
             u_int32_t record_date = get_today_start_timestamp_from_ts(record->timestamp);
             if (oldest_date == 0 || record_date < oldest_date) {
                 oldest_date = record_date;
             }
         }
-        
-        
+
+
         if (oldest_date != 0 && oldest_date < today) {
-            
+
             for (u_int32_t date = oldest_date; date < today; date += SECONDS_PER_DAY) {
-                
+
                 int has_records = 0;
                 list_for_each_entry(record, &client->online_offline_records, record) {
                     u_int32_t record_date = get_today_start_timestamp_from_ts(record->timestamp);
@@ -3306,13 +3306,13 @@ void archive_and_save_online_offline_records(void) {
                         break;
                     }
                 }
-                
+
                 if (has_records) {
                     save_online_offline_records_to_file(client, date);
                 }
             }
-            
-            
+
+
             struct list_head *pos, *n;
             list_for_each_safe(pos, n, &client->online_offline_records) {
                 record = list_entry(pos, online_offline_record_t, record);
@@ -3331,44 +3331,44 @@ void save_global_traffic_stats_to_file(u_int32_t date) {
     char date_str[32] = {0};
 	int hour;
     get_date_string(date, date_str, sizeof(date_str));
-    
-    
+
+
     char global_stats_dir[512] = {0};
     snprintf(global_stats_dir, sizeof(global_stats_dir), "%s/global/stats", get_history_data_root_dir());
-    
+
     if (ensure_dir_exists(global_stats_dir) != 0) {
-        LOG_ERROR("Failed to create global stats directory %s for traffic stats (date: %s)\n", 
+        LOG_ERROR("Failed to create global stats directory %s for traffic stats (date: %s)\n",
                   global_stats_dir, date_str);
         return;
     }
-    
-    
+
+
     char file_path[512] = {0};
     snprintf(file_path, sizeof(file_path), "%s/traffic_%s.json", global_stats_dir, date_str);
-    
-    
+
+
     struct json_object *json_obj = json_object_new_object();
     json_object_object_add(json_obj, "date", json_object_new_int64(date));
-    
-    
+
+
     struct json_object *hourly_array = json_object_new_array();
     for (hour = 0; hour < HOURS_PER_DAY; hour++) {
         struct json_object *hour_obj = json_object_new_object();
-        
+
         json_object_object_add(hour_obj, "hour", json_object_new_int(hour));
-        
-        
+
+
         struct json_object *traffic_obj = json_object_new_object();
         json_object_object_add(traffic_obj, "up_bytes", json_object_new_int64(g_global_hourly_traffic[hour].up_bytes));
         json_object_object_add(traffic_obj, "down_bytes", json_object_new_int64(g_global_hourly_traffic[hour].down_bytes));
         json_object_object_add(hour_obj, "traffic", traffic_obj);
-        
+
         json_object_array_add(hourly_array, hour_obj);
     }
-    
+
     json_object_object_add(json_obj, "hourly_traffic", hourly_array);
-    
-    
+
+
     const char *json_string = json_object_to_json_string_ext(json_obj, JSON_C_TO_STRING_PRETTY);
     FILE *fp = fopen(file_path, "w");
     if (fp) {
@@ -3378,7 +3378,7 @@ void save_global_traffic_stats_to_file(u_int32_t date) {
     } else {
         LOG_ERROR("Failed to save global traffic stats to file: %s (errno: %d)\n", file_path, errno);
     }
-    
+
     json_object_put(json_obj);
 }
 
@@ -3393,18 +3393,18 @@ void check_and_archive_all_clients(void) {
         LOG_ERROR("Failed to get local time\n");
         return;
     }
-    
+
     u_int32_t today = get_today_start_timestamp();
-    
+
     u_int32_t yesterday = today - SECONDS_PER_DAY;
-    
+
     char yesterday_str[32] = {0};
     char today_str[32] = {0};
     get_date_string(yesterday, yesterday_str, sizeof(yesterday_str));
     get_date_string(today, today_str, sizeof(today_str));
-    
+
     LOG_WARN("Date changed: %s -> %s, starting archive process...\n", yesterday_str, today_str);
-    
+
     int client_count = 0;
     list_for_each_entry(node, &client_list, client) {
         client_count++;
@@ -3415,7 +3415,7 @@ void check_and_archive_all_clients(void) {
 
             int total_time = p_info->latest_time - p_info->first_time;
             if (total_time < g_app_valid_time) {
-                LOG_DEBUG("Discard visit record on date change (too short): mac=%s, appid=%d, duration=%ds < %ds\n", 
+                LOG_DEBUG("Discard visit record on date change (too short): mac=%s, appid=%d, duration=%ds < %ds\n",
                           node->mac, p_info->appid, total_time, g_app_valid_time);
                 list_del(&p_info->visit);
                 free(p_info);  // 直接删除，不加入visit列表
@@ -3427,48 +3427,48 @@ void check_and_archive_all_clients(void) {
                 save_visit_record_to_db(node->mac, p_info);
             }
         }
-        
+
         save_client_visit_data_to_file(node, yesterday);
-        
-        
+
+
         if (node->daily_stats.date == yesterday) {
             save_daily_stats_to_file(node, yesterday);
         }
         if (node->daily_top_apps_stats.date == yesterday) {
             save_daily_top_apps_stats_to_file(node, yesterday);
         }
-        
-        
+
+
         u_int32_t date_end = yesterday + SECONDS_PER_DAY - 1;
-        
+
         list_for_each_entry_safe(p_info, tmp_info, &node->visit, visit) {
             if (p_info->first_time >= yesterday && p_info->first_time <= date_end) {
                 list_del(&p_info->visit);
                 free(p_info);
             }
         }
-        
-        
+
+
         visit_stat_t *stat_node = NULL, *tmp_stat_node = NULL;
         list_for_each_entry_safe(stat_node, tmp_stat_node, &node->stat_list, list) {
             list_del(&stat_node->list);
             free(stat_node);
         }
-        
-        
+
+
         node->daily_stats.date = today;
         node->daily_stats.is_today = 1;
         for (i = 0; i < HOURS_PER_DAY; i++) {
             for (j = 0; j < TOP_APP_PER_HOUR; j++) {
                 node->daily_stats.hourly_top_apps[i][j] = -1;
             }
-            
+
             node->daily_stats.hourly_traffic[i].up_bytes = 0;
             node->daily_stats.hourly_traffic[i].down_bytes = 0;
             node->daily_stats.hourly_online_time[i] = 0;
             node->daily_stats.hourly_active_time[i] = 0;
         }
-        
+
         node->daily_top_apps_stats.date = today;
         node->daily_top_apps_stats.is_today = 1;
         node->daily_top_apps_stats.count = 0;
@@ -3477,40 +3477,40 @@ void check_and_archive_all_clients(void) {
             node->daily_top_apps_stats.apps[i].total_time = 0;
         }
     }
-    
-    
+
+
     today = get_today_start_timestamp();
     if (g_daily_stat_date != today) {
         memset(g_daily_type_stats, 0, sizeof(g_daily_type_stats));
         g_daily_stat_date = today;
         LOG_DEBUG("Reset global daily type stats for new day\n");
     }
-    
-    
+
+
     if (g_global_traffic_date != 0 && g_global_traffic_date != today) {
         save_global_traffic_stats_to_file(g_global_traffic_date);
     }
-    
-    
+
+
     if (g_global_traffic_date != today) {
         memset(g_global_hourly_traffic, 0, sizeof(g_global_hourly_traffic));
         g_global_traffic_date = today;
         LOG_DEBUG("Reset global traffic stats for new day\n");
     }
-    
-    
+
+
     global_app_type_record_t *record = NULL, *tmp_record = NULL;
     list_for_each_entry_safe(record, tmp_record, &global_hourly_records, list) {
         list_del(&record->list);
         free(record);
     }
     LOG_DEBUG("Reset global hourly type stats for new day\n");
-    
+
     LOG_DEBUG("Archive completed: processed %d clients for date %s\n", client_count, yesterday_str);
-    
+
     save_all_client_backup_to_files();
-    
-    
+
+
     cleanup_old_record_files();
 }
 
@@ -3536,20 +3536,20 @@ daily_top_apps_stat_t *get_today_top_apps_stat(client_node_t *client) {
 	int i;
     if (!client)
         return NULL;
-    
+
     u_int32_t today = get_today_start_timestamp();
-    
-    
+
+
     if (client->daily_top_apps_stats.date == today && client->daily_top_apps_stats.is_today == 1) {
         return &client->daily_top_apps_stats;
     }
-    
-    
+
+
     if (client->daily_top_apps_stats.date != 0 && client->daily_top_apps_stats.date != today) {
         save_daily_top_apps_stats_to_file(client, client->daily_top_apps_stats.date);
     }
-    
-    
+
+
     client->daily_top_apps_stats.date = today;
     client->daily_top_apps_stats.is_today = 1;
     client->daily_top_apps_stats.count = 0;
@@ -3557,7 +3557,7 @@ daily_top_apps_stat_t *get_today_top_apps_stat(client_node_t *client) {
         client->daily_top_apps_stats.apps[i].appid = -1;
         client->daily_top_apps_stats.apps[i].total_time = 0;
     }
-    
+
     return &client->daily_top_apps_stats;
 }
 
@@ -3565,9 +3565,9 @@ daily_top_apps_stat_t *get_today_top_apps_stat(client_node_t *client) {
 daily_top_apps_stat_t *load_history_top_apps_stat_from_file(client_node_t *client, u_int32_t date) {
     if (!client)
         return NULL;
-    
-    
-    
+
+
+
     return NULL;
 }
 
@@ -3576,7 +3576,7 @@ void update_daily_top_apps(client_node_t *client) {
     if (!client)
         return;
 
-    
+
     daily_top_apps_stat_t *today_stat = get_today_top_apps_stat(client);
     if (!today_stat)
         return;
@@ -3586,25 +3586,25 @@ void update_daily_top_apps(client_node_t *client) {
     int app_count = 0;
     int i;
 
-    
+
     for (i = 0; i < MAX_APP_STAT_NUM; i++) {
         app_stats[i].appid = -1;
         app_stats[i].total_time = 0;
     }
 
-    
+
     visit_info_t *p_info = NULL;
     list_for_each_entry(p_info, &client->visit, visit) {
-        
+
         if (!is_same_day(p_info->first_time, cur_time))
             continue;
 
-        
+
         unsigned long long visit_time = p_info->latest_time - p_info->first_time;
         if (visit_time == 0)
-            visit_time = 1; 
+            visit_time = 1;
 
-        
+
         int found = 0;
         for (i = 0; i < app_count; i++) {
             if (app_stats[i].appid == p_info->appid) {
@@ -3614,13 +3614,13 @@ void update_daily_top_apps(client_node_t *client) {
             }
         }
 
-        
+
         if (!found && app_count < MAX_APP_STAT_NUM) {
             app_stats[app_count].appid = p_info->appid;
             app_stats[app_count].total_time = visit_time;
             app_count++;
         } else if (!found && app_count >= MAX_APP_STAT_NUM) {
-            
+
             int min_idx = 0;
             unsigned long long min_time = app_stats[0].total_time;
             for (i = 1; i < MAX_APP_STAT_NUM; i++) {
@@ -3637,7 +3637,7 @@ void update_daily_top_apps(client_node_t *client) {
     }
 
     if (app_count == 0) {
-        
+
         today_stat->count = 0;
         for (i = 0; i < MAX_TOP_APPS_PER_DAY; i++) {
             today_stat->apps[i].appid = -1;
@@ -3646,13 +3646,13 @@ void update_daily_top_apps(client_node_t *client) {
         return;
     }
 
-    
+
     qsort(app_stats, app_count, sizeof(app_time_stat_t), compare_app_time_stat);
 
-    
+
     int top_count = (app_count < MAX_TOP_APPS_PER_DAY) ? app_count : MAX_TOP_APPS_PER_DAY;
     today_stat->count = 0;
-    
+
     for (i = 0; i < top_count; i++) {
         if (app_stats[i].appid > 0 && app_stats[i].total_time > 0) {
             today_stat->apps[today_stat->count].appid = app_stats[i].appid;
@@ -3660,8 +3660,8 @@ void update_daily_top_apps(client_node_t *client) {
             today_stat->count++;
         }
     }
-    
-    
+
+
     for (i = today_stat->count; i < MAX_TOP_APPS_PER_DAY; i++) {
         today_stat->apps[i].appid = -1;
         today_stat->apps[i].total_time = 0;
@@ -3673,46 +3673,46 @@ void save_daily_top_apps_stats_to_file(client_node_t *client, u_int32_t date) {
 	int i;
     if (!client)
         return;
-    
+
     daily_top_apps_stat_t *stat = &client->daily_top_apps_stats;
     if (stat->date != date) {
         char date_str[32] = {0};
         char stat_date_str[32] = {0};
         get_date_string(date, date_str, sizeof(date_str));
         get_date_string(stat->date, stat_date_str, sizeof(stat_date_str));
-        LOG_DEBUG("Date mismatch for client %s: requested %s, but stat date is %s, skip saving\n", 
+        LOG_DEBUG("Date mismatch for client %s: requested %s, but stat date is %s, skip saving\n",
                  client->mac, date_str, stat_date_str);
-        return;  
+        return;
     }
-    
-    
+
+
     char stats_dir[512] = {0};
     char mac_dirname[64] = {0};
     mac_to_dirname(client->mac, mac_dirname, sizeof(mac_dirname));
     snprintf(stats_dir, sizeof(stats_dir), "%s/%s/stats", get_client_data_base_dir(), mac_dirname);
-    
+
     if (ensure_dir_exists(stats_dir) != 0) {
         char date_str[32] = {0};
         get_date_string(date, date_str, sizeof(date_str));
-        LOG_ERROR("Failed to create stats directory %s for client %s top apps (date: %s)\n", 
+        LOG_ERROR("Failed to create stats directory %s for client %s top apps (date: %s)\n",
                   stats_dir, client->mac, date_str);
         return;
     }
-    
-    
+
+
     char date_str[32] = {0};
     get_date_string(date, date_str, sizeof(date_str));
-    
+
     char file_path[512] = {0};
     snprintf(file_path, sizeof(file_path), "%s/top_apps_%s.json", stats_dir, date_str);
-    
-    
+
+
     struct json_object *json_obj = json_object_new_object();
     json_object_object_add(json_obj, "date", json_object_new_int64(date));
     json_object_object_add(json_obj, "mac", json_object_new_string(client->mac));
     json_object_object_add(json_obj, "count", json_object_new_int(stat->count));
-    
-    
+
+
     struct json_object *apps_array = json_object_new_array();
     for (i = 0; i < stat->count; i++) {
         struct json_object *app_obj = json_object_new_object();
@@ -3724,10 +3724,10 @@ void save_daily_top_apps_stats_to_file(client_node_t *client, u_int32_t date) {
         }
         json_object_array_add(apps_array, app_obj);
     }
-    
+
     json_object_object_add(json_obj, "apps", apps_array);
-    
-    
+
+
     const char *json_string = json_object_to_json_string_ext(json_obj, JSON_C_TO_STRING_PRETTY);
     FILE *fp = fopen(file_path, "w");
     if (fp) {
@@ -3735,12 +3735,12 @@ void save_daily_top_apps_stats_to_file(client_node_t *client, u_int32_t date) {
         fclose(fp);
         char date_str[32] = {0};
         get_date_string(date, date_str, sizeof(date_str));
-        LOG_DEBUG("Saved daily top apps stats for client %s (date: %s, count: %d) to %s\n", 
+        LOG_DEBUG("Saved daily top apps stats for client %s (date: %s, count: %d) to %s\n",
                  client->mac, date_str, stat->count, file_path);
     } else {
         LOG_ERROR("Failed to save daily top apps stats to file: %s (errno: %d)\n", file_path, errno);
     }
-    
+
     json_object_put(json_obj);
 }
 
@@ -3749,11 +3749,11 @@ static void mac_to_dirname(const char *mac, char *dirname, size_t len) {
 	int i;
     if (!mac || !dirname || len == 0)
         return;
-    
+
     strncpy(dirname, mac, len - 1);
     dirname[len - 1] = '\0';
-    
-    
+
+
     for (i = 0; dirname[i] != '\0'; i++) {
         if (dirname[i] == ':') {
             dirname[i] = '_';
@@ -3766,7 +3766,7 @@ static int ensure_dir_exists(const char *path) {
     char cmd[512] = {0};
     snprintf(cmd, sizeof(cmd), "mkdir -p %s", path);
     system(cmd);
-    
+
     return 0;
 }
 
@@ -3774,14 +3774,14 @@ static int ensure_dir_exists(const char *path) {
 static void get_date_string(u_int32_t timestamp, char *date_str, size_t len) {
     if (!date_str || len == 0)
         return;
-    
+
     time_t t = (time_t)timestamp;
     struct tm *tm_info = localtime(&t);
     if (!tm_info) {
         date_str[0] = '\0';
         return;
     }
-    
+
     strftime(date_str, len, "%Y-%m-%d", tm_info);
 }
 
@@ -3789,14 +3789,14 @@ static void get_date_string(u_int32_t timestamp, char *date_str, size_t len) {
 static void format_time_string(u_int32_t timestamp, char *time_str, size_t len) {
     if (!time_str || len == 0)
         return;
-    
+
     time_t t = (time_t)timestamp;
     struct tm *tm_info = localtime(&t);
     if (!tm_info) {
         time_str[0] = '\0';
         return;
     }
-    
+
     strftime(time_str, len, "%Y-%m-%d %H:%M:%S", tm_info);
 }
 
@@ -3805,35 +3805,35 @@ void save_client_visit_data_to_file(client_node_t *client, u_int32_t date) {
     if (!client)
         return;
     LOG_DEBUG("begin save_client_visit_data_to_file: %s, date: %u\n", client->mac, date);
-    
+
     int visit_count = 0;
     visit_info_t *p_info = NULL;
-    u_int32_t date_end = date + SECONDS_PER_DAY - 1;  
-    
+    u_int32_t date_end = date + SECONDS_PER_DAY - 1;
+
     list_for_each_entry(p_info, &client->visit, visit) {
-        
+
         if (p_info->first_time >= date && p_info->first_time <= date_end) {
             visit_count++;
         }
     }
-    
-    
+
+
     if (visit_count == 0) {
         char date_str[32] = {0};
         get_date_string(date, date_str, sizeof(date_str));
         LOG_DEBUG("No visit records for client %s on date %s, skip saving\n", client->mac, date_str);
         return;
     }
-    
-    
+
+
     if (ensure_dir_exists(get_history_data_root_dir()) != 0) {
         LOG_ERROR("Failed to create root directory: %s\n", get_history_data_root_dir());
         return;
     }
-    
+
     char date_str[32] = {0};
     get_date_string(date, date_str, sizeof(date_str));
-    
+
     char file_path[512] = {0};
     sqlite3 *db = NULL;
     sqlite3_stmt *delete_stmt = NULL;
@@ -3881,14 +3881,14 @@ void save_client_visit_data_to_file(client_node_t *client, u_int32_t date) {
         goto CLEANUP;
     }
 
-    
+
     list_for_each_entry(p_info, &client->visit, visit) {
-        
+
         if (p_info->first_time < date || p_info->first_time > date_end) {
             LOG_DEBUG("skip visit record: %u, %u\n", p_info->first_time, date_end);
             continue;
         }
-        
+
         int duration = p_info->latest_time - p_info->first_time;
         if (duration == 0)
             duration = 1;
@@ -3916,8 +3916,8 @@ void save_client_visit_data_to_file(client_node_t *client, u_int32_t date) {
         goto CLEANUP;
     }
     transaction_started = 0;
-    
-    LOG_DEBUG("Saved visit data for client %s (date: %s, records: %d) to sqlite db %s\n", 
+
+    LOG_DEBUG("Saved visit data for client %s (date: %s, records: %d) to sqlite db %s\n",
              client->mac, date_str, visit_count, file_path);
 
 CLEANUP:
@@ -3935,17 +3935,17 @@ CLEANUP:
 static u_int32_t parse_date_string(const char *date_str) {
     if (!date_str)
         return 0;
-    
+
     struct tm tm_info = {0};
     if (sscanf(date_str, "%d-%d-%d", &tm_info.tm_year, &tm_info.tm_mon, &tm_info.tm_mday) != 3)
         return 0;
-    
-    tm_info.tm_year -= 1900;  
-    tm_info.tm_mon -= 1;       
+
+    tm_info.tm_year -= 1900;
+    tm_info.tm_mon -= 1;
     tm_info.tm_hour = 0;
     tm_info.tm_min = 0;
     tm_info.tm_sec = 0;
-    
+
     return (u_int32_t)mktime(&tm_info);
 }
 
@@ -3954,12 +3954,12 @@ static int extract_date_from_filename(const char *filename, char *date_str, size
 	int i;
     if (!filename || !date_str || len == 0)
         return -1;
-    
-    
+
+
     const char *prefixes[] = {"hourly_", "top_apps_", "traffic_", NULL};
     const char *start = filename;
-    
-    
+
+
     for (i = 0; prefixes[i] != NULL; i++) {
         size_t prefix_len = strlen(prefixes[i]);
         if (strncmp(filename, prefixes[i], prefix_len) == 0) {
@@ -3967,12 +3967,12 @@ static int extract_date_from_filename(const char *filename, char *date_str, size
             break;
         }
     }
-    
-    
+
+
     int year, mon, mday;
     if (sscanf(start, "%d-%d-%d", &year, &mon, &mday) != 3)
         return -1;
-    
+
     snprintf(date_str, len, "%04d-%02d-%02d", year, mon, mday);
     return 0;
 }
@@ -3985,7 +3985,7 @@ static void cleanup_old_record_files(void) {
         LOG_ERROR("Failed to get local time for cleanup\n");
         return;
     }
-    
+
     u_int32_t expire_timestamp = (u_int32_t)now - (MAX_RECORD_DAY * SECONDS_PER_DAY);
     int deleted_count = 0;
     deleted_count += delete_expired_visit_records(expire_timestamp);
@@ -3995,32 +3995,32 @@ static void cleanup_old_record_files(void) {
         LOG_DEBUG("Base directory %s does not exist, skip cleanup\n", get_client_data_base_dir());
         return;
     }
-    
+
     struct dirent *client_entry;
-    
-    
+
+
     while ((client_entry = readdir(base_dir)) != NULL) {
         if (client_entry->d_name[0] == '.')
-            continue;  
-        
+            continue;
+
         char client_dir[512] = {0};
         snprintf(client_dir, sizeof(client_dir), "%s/%s", get_client_data_base_dir(), client_entry->d_name);
-        
+
         struct stat st;
         if (stat(client_dir, &st) != 0 || !S_ISDIR(st.st_mode))
-            continue;  
-        
-        
+            continue;
+
+
         char visits_dir[512] = {0};
         snprintf(visits_dir, sizeof(visits_dir), "%s/visits", client_dir);
-        
+
         DIR *visits_dp = opendir(visits_dir);
         if (visits_dp) {
             struct dirent *file_entry;
             while ((file_entry = readdir(visits_dp)) != NULL) {
                 if (file_entry->d_name[0] == '.')
                     continue;
-                
+
                 char date_str[32] = {0};
                 if (extract_date_from_filename(file_entry->d_name, date_str, sizeof(date_str)) == 0) {
                     u_int32_t file_date = parse_date_string(date_str);
@@ -4038,18 +4038,18 @@ static void cleanup_old_record_files(void) {
             }
             closedir(visits_dp);
         }
-        
-        
+
+
         char stats_dir[512] = {0};
         snprintf(stats_dir, sizeof(stats_dir), "%s/stats", client_dir);
-        
+
         DIR *stats_dp = opendir(stats_dir);
         if (stats_dp) {
             struct dirent *file_entry;
             while ((file_entry = readdir(stats_dp)) != NULL) {
                 if (file_entry->d_name[0] == '.')
                     continue;
-                
+
                 char date_str[32] = {0};
                 if (extract_date_from_filename(file_entry->d_name, date_str, sizeof(date_str)) == 0) {
                     u_int32_t file_date = parse_date_string(date_str);
@@ -4068,20 +4068,20 @@ static void cleanup_old_record_files(void) {
             closedir(stats_dp);
         }
     }
-    
+
     closedir(base_dir);
-    
-    
+
+
     char global_stats_dir[512] = {0};
     snprintf(global_stats_dir, sizeof(global_stats_dir), "%s/global/stats", get_history_data_root_dir());
-    
+
     DIR *global_stats_dp = opendir(global_stats_dir);
     if (global_stats_dp) {
         struct dirent *file_entry;
         while ((file_entry = readdir(global_stats_dp)) != NULL) {
             if (file_entry->d_name[0] == '.')
                 continue;
-            
+
             char date_str[32] = {0};
             if (extract_date_from_filename(file_entry->d_name, date_str, sizeof(date_str)) == 0) {
                 u_int32_t file_date = parse_date_string(date_str);
@@ -4099,9 +4099,9 @@ static void cleanup_old_record_files(void) {
         }
         closedir(global_stats_dp);
     }
-    
+
     if (deleted_count > 0) {
-        LOG_WARN("Cleanup completed: deleted %d expired record files (older than %d days)\n", 
+        LOG_WARN("Cleanup completed: deleted %d expired record files (older than %d days)\n",
                  deleted_count, MAX_RECORD_DAY);
     }
 }
@@ -4110,15 +4110,15 @@ static void cleanup_old_record_files(void) {
 void get_global_traffic_stats(traffic_stat_t *traffic_array) {
     if (!traffic_array)
         return;
-    
-    
+
+
     u_int32_t today = get_today_start_timestamp();
     if (g_global_traffic_date != today) {
         memset(g_global_hourly_traffic, 0, sizeof(g_global_hourly_traffic));
         g_global_traffic_date = today;
     }
-    
-    
+
+
     memcpy(traffic_array, g_global_hourly_traffic, sizeof(g_global_hourly_traffic));
 }
 
@@ -4130,29 +4130,29 @@ void get_global_traffic_stats(traffic_stat_t *traffic_array) {
 void delete_client_record_files(const char *mac, const char *start_date, const char *end_date, const char *delete_type) {
     u_int32_t start_timestamp = 0;
     u_int32_t end_timestamp = UINT32_MAX;
-    
-    
+
+
     if (start_date && strlen(start_date) > 0) {
-        
+
         if (strchr(start_date, '-')) {
             start_timestamp = parse_date_string(start_date);
         } else {
             start_timestamp = (u_int32_t)atoi(start_date);
         }
     }
-    
-    
+
+
     if (end_date && strlen(end_date) > 0) {
         if (strchr(end_date, '-')) {
             u_int32_t end_date_ts = parse_date_string(end_date);
-            
+
             end_timestamp = end_date_ts + SECONDS_PER_DAY - 1;
         } else {
             end_timestamp = (u_int32_t)atoi(end_date);
         }
     }
-    
-    
+
+
     int delete_visits = 1;
     int delete_stats = 1;
     if (delete_type && strlen(delete_type) > 0) {
@@ -4167,14 +4167,14 @@ void delete_client_record_files(const char *mac, const char *start_date, const c
             delete_stats = 1;
         }
     }
-    
+
     char mac_dirname[64] = {0};
     int specific_mac = 0;
     if (mac && strlen(mac) > 0) {
         mac_to_dirname(mac, mac_dirname, sizeof(mac_dirname));
         specific_mac = 1;
     }
-    
+
     DIR *base_dir = opendir(get_client_data_base_dir());
     int deleted_count = 0;
 
@@ -4186,34 +4186,34 @@ void delete_client_record_files(const char *mac, const char *start_date, const c
         LOG_DEBUG("Base directory %s does not exist, skip client directory cleanup\n", get_client_data_base_dir());
     } else {
         struct dirent *client_entry;
-        
+
         while ((client_entry = readdir(base_dir)) != NULL) {
             if (client_entry->d_name[0] == '.')
-                continue;  
-            
-            
+                continue;
+
+
             if (specific_mac && strcmp(client_entry->d_name, mac_dirname) != 0)
                 continue;
-            
+
             char client_dir[512] = {0};
             snprintf(client_dir, sizeof(client_dir), "%s/%s", get_client_data_base_dir(), client_entry->d_name);
-            
+
             struct stat st;
             if (stat(client_dir, &st) != 0 || !S_ISDIR(st.st_mode))
-                continue;  
-            
-            
+                continue;
+
+
             if (delete_visits) {
                 char visits_dir[512] = {0};
                 snprintf(visits_dir, sizeof(visits_dir), "%s/visits", client_dir);
-                
+
                 DIR *visits_dp = opendir(visits_dir);
                 if (visits_dp) {
                     struct dirent *file_entry;
                     while ((file_entry = readdir(visits_dp)) != NULL) {
                         if (file_entry->d_name[0] == '.')
                             continue;
-                        
+
                         char date_str[32] = {0};
                         if (extract_date_from_filename(file_entry->d_name, date_str, sizeof(date_str)) == 0) {
                             u_int32_t file_date = parse_date_string(date_str);
@@ -4232,24 +4232,24 @@ void delete_client_record_files(const char *mac, const char *start_date, const c
                     closedir(visits_dp);
                 }
             }
-            
-            
+
+
             if (delete_stats) {
                 char stats_dir[512] = {0};
                 snprintf(stats_dir, sizeof(stats_dir), "%s/stats", client_dir);
-                
+
                 DIR *stats_dp = opendir(stats_dir);
                 if (stats_dp) {
                     struct dirent *file_entry;
                     while ((file_entry = readdir(stats_dp)) != NULL) {
                         if (file_entry->d_name[0] == '.')
                             continue;
-                        
+
                         char date_str[32] = {0};
                         if (extract_date_from_filename(file_entry->d_name, date_str, sizeof(date_str)) == 0) {
                             u_int32_t file_date = parse_date_string(date_str);
                             if (file_date > 0 && file_date >= start_timestamp && file_date <= end_timestamp) {
-                                char file_path[768] = {0};  
+                                char file_path[768] = {0};
                                 int path_len = snprintf(file_path, sizeof(file_path), "%s/%s", stats_dir, file_entry->d_name);
                                 if (path_len >= 0 && path_len < sizeof(file_path)) {
                                     if (unlink(file_path) == 0) {
@@ -4268,7 +4268,7 @@ void delete_client_record_files(const char *mac, const char *start_date, const c
                 }
             }
         }
-        
+
         closedir(base_dir);
     }
 
@@ -4301,7 +4301,7 @@ void delete_client_record_files(const char *mac, const char *start_date, const c
             closedir(global_dp);
         }
     }
-    
+
     LOG_DEBUG("Delete completed: deleted %d record files\n", deleted_count);
 }
 
@@ -4309,25 +4309,25 @@ void delete_client_record_files(const char *mac, const char *start_date, const c
 void update_global_app_type_stats(int appid, unsigned long long time_delta) {
     if (appid <= 0 || time_delta == 0)
         return;
-    
+
     int app_type = appid / 1000;
     if (app_type <= 0 || app_type > MAX_APP_TYPE)
         return;
-    
-    int type_index = app_type - 1;  
+
+    int type_index = app_type - 1;
     u_int32_t cur_time = get_timestamp();
-    
-    
+
+
     u_int32_t today = get_today_start_timestamp();
     if (g_daily_stat_date != today) {
         memset(g_daily_type_stats, 0, sizeof(g_daily_type_stats));
         g_daily_stat_date = today;
     }
-    
-    
+
+
     g_daily_type_stats[type_index] += time_delta;
-    
-    
+
+
     global_app_type_record_t *record = (global_app_type_record_t *)calloc(1, sizeof(global_app_type_record_t));
     if (record) {
         record->app_type = app_type;
@@ -4341,24 +4341,24 @@ void update_global_app_type_stats(int appid, unsigned long long time_delta) {
 
 void cleanup_expired_hourly_stats(void) {
     u_int32_t cur_time = get_timestamp();
-    u_int32_t expire_time = cur_time - 3600;  
-    
+    u_int32_t expire_time = cur_time - 3600;
+
     global_app_type_record_t *record = NULL, *tmp_record = NULL;
     int cleared_count = 0;
-    
-    
+
+
     list_for_each_entry_safe(record, tmp_record, &global_hourly_records, list) {
         if (record->timestamp < expire_time) {
-            
+
             list_del(&record->list);
             free(record);
             cleared_count++;
         } else {
-            
+
             break;
         }
     }
-    
+
     if (cleared_count > 0) {
         LOG_DEBUG("Cleared %d expired hourly records\n", cleared_count);
     }
@@ -4368,15 +4368,15 @@ void cleanup_expired_hourly_stats(void) {
 void get_global_daily_app_type_stats(unsigned long long *type_time_array) {
     if (!type_time_array)
         return;
-    
-    
+
+
     u_int32_t today = get_today_start_timestamp();
     if (g_daily_stat_date != today) {
         memset(g_daily_type_stats, 0, sizeof(g_daily_type_stats));
         g_daily_stat_date = today;
     }
-    
-    
+
+
     memcpy(type_time_array, g_daily_type_stats, sizeof(g_daily_type_stats));
 }
 
@@ -4384,17 +4384,17 @@ void get_global_daily_app_type_stats(unsigned long long *type_time_array) {
 void get_global_hourly_app_type_stats(unsigned long long *type_time_array) {
     if (!type_time_array)
         return;
-    
-    
+
+
     cleanup_expired_hourly_stats();
-    
-    
+
+
     memset(type_time_array, 0, sizeof(unsigned long long) * MAX_APP_TYPE);
-    
-    
+
+
     u_int32_t cur_time = get_timestamp();
-    u_int32_t expire_time = cur_time - 3600;  
-    
+    u_int32_t expire_time = cur_time - 3600;
+
     global_app_type_record_t *record = NULL;
     list_for_each_entry(record, &global_hourly_records, list) {
         if (record->timestamp >= expire_time) {

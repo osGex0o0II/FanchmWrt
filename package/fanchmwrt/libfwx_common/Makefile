@@ -27,7 +27,7 @@ define Build/Compile
 	CFLAGS="$(TARGET_CFLAGS)" \
 	LIBS="$(TARGET_LDFLAGS) -lm -luci -ljson-c" \
 	all
-endef	
+endef
 
 
 define Build/Compile/Default
@@ -52,4 +52,3 @@ define Build/InstallDev
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))
-

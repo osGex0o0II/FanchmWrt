@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <linux/init.h>
 #include <linux/module.h>
@@ -58,7 +58,7 @@ static DEFINE_SPINLOCK(active_app_list_lock);
 static LIST_HEAD(active_host_list);
 static DEFINE_SPINLOCK(active_host_list_lock);
 
-u_int32_t fwx_log_level = 3;  
+u_int32_t fwx_log_level = 3;
 
 #define feature_list_read_lock() read_lock_bh(&af_feature_lock);
 #define feature_list_read_unlock() read_unlock_bh(&af_feature_lock);
@@ -764,7 +764,7 @@ int __add_app_feature(char *feature, int appid, char *name, int proto, int src_p
 			node->pos_info[node->pos_num].value = value;
 			node->pos_num++;
 		}
-	
+
 		feature_list_write_lock();
 		list_add(&(node->head), &af_feature_head);
 		if (strlen(node->host_url) > 0 && !af_is_regex_host_pattern(node->host_url)) {
@@ -925,7 +925,7 @@ int add_app_feature(int appid, char *name, char *feature)
 		AF_ERROR("error, name or feature is null\n");
 		return -1;
 	}
-	
+
 	if (strlen(feature) < MIN_FEATURE_STR_LEN){
 		return -1;
 	}
@@ -1057,7 +1057,7 @@ void af_init_feature(char *feature_str)
 	}
 	if (p != begin)
 	{
-		
+
 		if (p - begin > MAX_FEATURE_STR_LEN){
 			printk("error, feature len error %d\n", p - len);
 		}
@@ -1067,7 +1067,7 @@ void af_init_feature(char *feature_str)
 			add_app_feature(app_id, app_name, feature);
 		}
 	}
-	g_feature_count++;  
+	g_feature_count++;
 
 	if (feature_buf)
 		kfree(feature_buf);
@@ -1082,7 +1082,7 @@ void load_feature_buf_from_file(char **config_buf)
 #endif
 	off_t size;
 	fp = filp_open(AF_FEATURE_CONFIG_FILE, O_RDONLY, 0);
-	
+
 
 	if (IS_ERR(fp))
 	{
@@ -1285,9 +1285,9 @@ int dpi_https_proto(flow_info_t *flow)
 		{
 			AF_LMT_DEBUG("match https host failed, data_len = %d, sport:%d, dport:%d\n", data_len, flow->sport,flow->dport);
 			if ((TEST_MODE())){
- 				print_hex_ascii(flow->l4_data,  flow->l4_len);
+				print_hex_ascii(flow->l4_data,  flow->l4_len);
 			}
-			flow->client_hello = 1;	
+			flow->client_hello = 1;
 			return -1;
 		}
 
@@ -1461,7 +1461,7 @@ char *k_memstr(char *data, char *str, int size)
 	for (p = data; p <= (data - len + size); p++)
 	{
 		if (memcmp(p, str, len) == 0)
-			return p; 
+			return p;
 	}
 	return NULL;
 }
@@ -1475,7 +1475,7 @@ int af_match_by_pos(flow_info_t *flow, af_feature_node_t *node)
 		return AF_FALSE;
 	if (node->pos_num > 0)
 	{
-		
+
 		for (i = 0; i < node->pos_num && i < MAX_POS_INFO_PER_FEATURE; i++)
 		{
 
@@ -1585,7 +1585,7 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 	}
 	else if (node->pos_num > 0)
 	{
-		
+
 		ret = af_match_by_pos(flow, node);
 	}
 	else
@@ -1604,26 +1604,26 @@ int is_quic_flow(flow_info_t *flow)
 	unsigned char *data;
 	unsigned char first_byte;
 	unsigned int version;
-	
+
 	if (flow->l4_protocol != IPPROTO_UDP) {
 		return AF_FALSE;
 	}
-	
+
 	if (!flow->l4_data || flow->l4_len < 8) {
 		return AF_FALSE;
 	}
-	
+
 	data = flow->l4_data;
 	first_byte = data[0];
-	
+
 	if (first_byte & 0x80) {
 		if (flow->l4_len >= 5) {
 			version = (data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4];
 
 			if (version == 0x00000001 ||
-				version == 0x00000000 ||  
-				version == 0x6b3343cf || 
-				(version >= 0xff000000 && version <= 0xffffffff)) { 
+				version == 0x00000000 ||
+				version == 0x6b3343cf ||
+				(version >= 0xff000000 && version <= 0xffffffff)) {
 				AF_LMT_DEBUG("match quic, version = %x\n", version);
 				return AF_TRUE;
 			}
@@ -1836,7 +1836,7 @@ int match_app_filter_rule(int appid, af_client_info_t *client)
 	if (!g_appfilter_enable) {
 		return AF_FALSE;
 	}
-	
+
 	if (fwx_match_app_filter_whitelist(client->mac)){
 		AF_LMT_DEBUG("match appfilter whitelist mac = " MAC_FMT "\n", MAC_ARRAY(client->mac));
 		return AF_FALSE;
@@ -1856,7 +1856,7 @@ int match_mac_filter_rule(af_client_info_t *client)
 	if (!g_mac_filter_enable) {
 		return AF_FALSE;
 	}
-	
+
 	if (fwx_match_mac_filter_whitelist(client->mac)){
 		AF_LMT_DEBUG("match macfilter whitelist mac = " MAC_FMT "\n", MAC_ARRAY(client->mac));
 		return AF_FALSE;
@@ -1883,14 +1883,14 @@ int af_update_client_app_info(af_client_info_t *node, int app_id, int drop, int 
 		spin_unlock_bh(&node->visit_info_lock);
 		return -1;
 	}
-	
+
 	info->total_num++;
 	if (drop)
 		info->drop_num++;
 	info->latest_time = af_get_timestamp_sec();
 	info->latest_action = drop;
 
-	
+
 
 	if (!from_conntrack) {
 		info->conn_count++;
@@ -1901,7 +1901,7 @@ int af_update_client_app_info(af_client_info_t *node, int app_id, int drop, int 
 		node->visiting.app_time = af_get_timestamp_sec();
 		node->visiting.visiting_app = app_id;
 	}
-	
+
 	spin_unlock_bh(&node->visit_info_lock);
 	return 0;
 }
@@ -1934,7 +1934,7 @@ int update_url_visiting_info(af_client_info_t *client, flow_info_t *flow)
 	unsigned int len = 0;
 	if (!client || !flow)
 		return -1;
-	
+
 	if (flow->https.match){
 		host = flow->https.url_pos;
 
@@ -1953,7 +1953,7 @@ int update_url_visiting_info(af_client_info_t *client, flow_info_t *flow)
 		return -1;
 
 	memcpy(client->visiting.visiting_url, host_buf, len);
-	client->visiting.visiting_url[len] = 0x0; 
+	client->visiting.visiting_url[len] = 0x0;
 	client->visiting.url_time = af_get_timestamp_sec();
 	return 0;
 }
@@ -2057,7 +2057,7 @@ void send_reset_packet(struct sk_buff *skb, flow_info_t *flow){
 
 			#else
 				nf_send_reset(skb, NF_INET_PRE_ROUTING);
-			#endif	
+			#endif
 		}
 	}
 }
@@ -2070,18 +2070,18 @@ u_int32_t check_app_action_changed(int action, u_int32_t app_id, af_client_info_
 	u_int32_t max_jiffies = 30 * HZ;
 	u_int32_t interval_jiffies = jiffies - g_appfilter_update_jiffies;
 
-	if (interval_jiffies < max_jiffies){     
+	if (interval_jiffies < max_jiffies){
 		AF_LMT_DEBUG("config changed, update app action\n");
 		if (match_app_filter_rule(app_id, client)){
 			AF_LMT_DEBUG("match appid = %d, action = %d\n", app_id, action);
 			if (!action) // accept --> drop
 				changed = 1;
-		}    
+		}
 		else{
 			if (action) // drop --> accept
 				changed = 1;
-		}    
-	} 
+		}
+	}
 	return changed;
 }
 
@@ -2143,7 +2143,7 @@ u_int32_t fwx_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev)
 
 
 	spin_lock(&af_conn_lock);
-   	conn = af_conn_find_and_add(flow.src, flow.dst, flow.sport, flow.dport, flow.l4_protocol);
+	conn = af_conn_find_and_add(flow.src, flow.dst, flow.sport, flow.dport, flow.l4_protocol);
 	if (!conn){
 		return NF_ACCEPT;
 	}
@@ -2196,7 +2196,7 @@ u_int32_t fwx_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev)
 		if (fwx_match_feature(&flow)){
 			conn->app_id = flow.app_id;
 			conn->drop = flow.drop;
-			if (flow.app_id < 1000){ 
+			if (flow.app_id < 1000){
 				conn->ignore = 1;
 			}
 			else{
@@ -2207,27 +2207,27 @@ u_int32_t fwx_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev)
 				else{
 					conn->ignore = 0;
 				}
-	 		}
+			}
 			conn->state = AF_CONN_DPI_FINISHED;
 			if (!conn->ignore && !is_record_whitelist)
 				af_update_active_app_list(client, &flow);
 			if (match_app_filter_rule(flow.app_id, client)) {
 				flow.drop = 1;
 				conn->drop = 1;
-				AF_LMT_INFO("##Drop App filter rule, appid = %d, mac = " MAC_FMT "\n", 
+				AF_LMT_INFO("##Drop App filter rule, appid = %d, mac = " MAC_FMT "\n",
 						flow.app_id, MAC_ARRAY(client->mac));
 				send_reset_packet(skb, &flow);
 			}
 		}
-		
+
 	}
 
-	
+
 
 	if (!flow.drop && match_mac_filter_rule(client)) {
 		flow.drop = 1;
 		conn->drop = 1;
-		AF_LMT_INFO("##Drop MAC filter rule, mac = " MAC_FMT "\n", 
+		AF_LMT_INFO("##Drop MAC filter rule, mac = " MAC_FMT "\n",
 				MAC_ARRAY(client->mac));
 		send_reset_packet(skb, &flow);
 	}
@@ -2237,7 +2237,7 @@ u_int32_t fwx_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev)
 			int is_http = (flow.http.match || flow.https.match) ? 1 : 0;
 			af_update_client_app_info(client, flow.app_id, flow.drop, 0, is_http);
 		}
-	} 
+	}
 
 
 	if (flow.drop)
@@ -2306,7 +2306,7 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 	if (ct->fwx_data.app_id != 0)
 	{
 		app_id = ct->fwx_data.app_id;
-		
+
 		AF_LMT_DEBUG("ct appid = %d\n", app_id);
 		u_int32_t orig_action = ct->fwx_data.action;
 
@@ -2329,7 +2329,7 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 				AF_LMT_DEBUG("update appid %d action to %s, action = %d-->%d\n",
 					 app_id, ct_action ? "drop" : "accept", orig_action, ct->fwx_data.action);
 			}
-		
+
 			if (g_record_enable){
 				if (!flow.ignore && !is_record_whitelist){
 					af_update_client_app_info(client, app_id, ct_action, 1, 0);
@@ -2352,7 +2352,7 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 		return NF_ACCEPT;
 
 
-	if (ct->fwx_data.match_status & 0x2) {	
+	if (ct->fwx_data.match_status & 0x2) {
 		flow.client_hello = 1;
 	}
 
@@ -2378,7 +2378,7 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 		update_url_visiting_info(client, &flow);
 	}
 	if (flow.client_hello) {
-		ct->fwx_data.match_status |= 0x2;  
+		ct->fwx_data.match_status |= 0x2;
 	}
 	else {
 		ct->fwx_data.match_status &= ~0x2;
@@ -2391,15 +2391,15 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 			flow.ignore = 1;
 		}
 		else if (flow.feature && flow.feature->ignore){
-			ct->fwx_data.match_status |= 0x1;  
+			ct->fwx_data.match_status |= 0x1;
 			flow.ignore = 1;
 			AF_LMT_DEBUG("gateway set ignore bit, match_status = %u\n", ct->fwx_data.match_status);
 		}
-		
+
 		if (match_app_filter_rule(flow.app_id, client)) {
 			flow.drop = 1;
-			ct->fwx_data.action = 1;  
-			AF_LMT_INFO("##Drop App filter rule, appid = %d, mac = " MAC_FMT "\n", 
+			ct->fwx_data.action = 1;
+			AF_LMT_INFO("##Drop App filter rule, appid = %d, mac = " MAC_FMT "\n",
 					flow.app_id, MAC_ARRAY(client->mac));
 			if (skb->protocol == htons(ETH_P_IP) && g_tcp_rst){
 			#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
@@ -2414,12 +2414,12 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 			ret = NF_DROP;
 		}
 	}
-	
+
 	if (ret != NF_DROP){
 		if (match_mac_filter_rule(client)) {
 			flow.drop = 1;
-			ct->fwx_data.action = 1;  
-			AF_LMT_WARN("##Drop MAC filter rule, mac = " MAC_FMT "\n", 
+			ct->fwx_data.action = 1;
+			AF_LMT_WARN("##Drop MAC filter rule, mac = " MAC_FMT "\n",
 					MAC_ARRAY(client->mac));
 			if (skb->protocol == htons(ETH_P_IP) && g_tcp_rst){
 			#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
@@ -2444,11 +2444,11 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 			}
 		}
 
-	
+
 		if (!is_record_whitelist) {
 			af_update_active_host_list(client, &flow);
 		}
-		
+
 		AF_LMT_INFO("match %s %pI4(%d)--> %pI4(%d) len = %d, %d\n ", IPPROTO_TCP == flow.l4_protocol ? "tcp" : "udp",
 					&flow.src, flow.sport, &flow.dst, flow.dport, skb->len, flow.app_id);
 	}
@@ -2776,17 +2776,17 @@ void af_update_active_app_list(af_client_info_t *client, flow_info_t *flow)
 	active_app_node_t *new_node = NULL;
 	int found = 0;
 	int list_count = 0;
-	
+
 	if (!client || !flow || flow->app_id == 0)
 		return;
-	
+
 	spin_lock_bh(&active_app_list_lock);
-	
-	
+
+
 	list_for_each_entry_safe(node, tmp_node, &active_app_list, list) {
 		list_count++;
 		if (node->app_id == flow->app_id) {
-			
+
 			memcpy(node->mac, client->mac, MAC_ADDR_LEN);
 			node->src_ip = flow->src;
 			node->dst_ip = flow->dst;
@@ -2800,10 +2800,10 @@ void af_update_active_app_list(af_client_info_t *client, flow_info_t *flow)
 			node->dst_port = flow->dport;
 			node->l4_protocol = flow->l4_protocol;
 			node->drop = flow->drop;
-			
-			
+
+
 			if (flow->http.match) {
-				node->proto_type = 1;  
+				node->proto_type = 1;
 				if (flow->http.host_pos && flow->http.host_len > 0) {
 					int copy_len = (flow->http.host_len > 31) ? 31 : flow->http.host_len;
 					memcpy(node->host, flow->http.host_pos, copy_len);
@@ -2811,7 +2811,7 @@ void af_update_active_app_list(af_client_info_t *client, flow_info_t *flow)
 				} else {
 					node->host[0] = '\0';
 				}
-				
+
 				if (flow->http.url_pos && flow->http.url_len > 0) {
 					int copy_len = (flow->http.url_len > 31) ? 31 : flow->http.url_len;
 					memcpy(node->uri, flow->http.url_pos, copy_len);
@@ -2820,7 +2820,7 @@ void af_update_active_app_list(af_client_info_t *client, flow_info_t *flow)
 					node->uri[0] = '\0';
 				}
 			} else if (flow->https.match) {
-				node->proto_type = 2;  
+				node->proto_type = 2;
 				if (flow->https.url_pos && flow->https.url_len > 0) {
 					int copy_len = (flow->https.url_len > 31) ? 31 : flow->https.url_len;
 					memcpy(node->host, flow->https.url_pos, copy_len);
@@ -2828,27 +2828,27 @@ void af_update_active_app_list(af_client_info_t *client, flow_info_t *flow)
 				} else {
 					node->host[0] = '\0';
 				}
-				
+
 				node->uri[0] = '\0';
 			} else {
-				node->proto_type = 0;  
+				node->proto_type = 0;
 				node->host[0] = '\0';
 				node->uri[0] = '\0';
 			}
-			
+
 			node->update_time = ktime_get_real_seconds();
-			
-			
+
+
 			list_move(&node->list, &active_app_list);
-			
+
 			found = 1;
 			break;
 		}
 	}
-	
-	
+
+
 	if (!found) {
-		
+
 		if (list_count >= MAX_ACTIVE_APP_LIST_SIZE) {
 			if (!list_empty(&active_app_list)) {
 				node = list_last_entry(&active_app_list, active_app_node_t, list);
@@ -2856,8 +2856,8 @@ void af_update_active_app_list(af_client_info_t *client, flow_info_t *flow)
 				kfree(node);
 			}
 		}
-		
-		
+
+
 		new_node = kzalloc(sizeof(active_app_node_t), GFP_ATOMIC);
 		if (new_node) {
 			INIT_LIST_HEAD(&new_node->list);
@@ -2875,43 +2875,43 @@ void af_update_active_app_list(af_client_info_t *client, flow_info_t *flow)
 			new_node->dst_port = flow->dport;
 			new_node->l4_protocol = flow->l4_protocol;
 			new_node->drop = flow->drop;
-			
-			
+
+
 			if (flow->http.match) {
-				new_node->proto_type = 1;  
+				new_node->proto_type = 1;
 				if (flow->http.host_pos && flow->http.host_len > 0) {
 					int copy_len = (flow->http.host_len > 31) ? 31 : flow->http.host_len;
 					memcpy(new_node->host, flow->http.host_pos, copy_len);
 					new_node->host[copy_len] = '\0';
 				}
-				
+
 				if (flow->http.url_pos && flow->http.url_len > 0) {
 					int copy_len = (flow->http.url_len > 31) ? 31 : flow->http.url_len;
 					memcpy(new_node->uri, flow->http.url_pos, copy_len);
 					new_node->uri[copy_len] = '\0';
 				}
 			} else if (flow->https.match) {
-				new_node->proto_type = 2;  
+				new_node->proto_type = 2;
 				if (flow->https.url_pos && flow->https.url_len > 0) {
 					int copy_len = (flow->https.url_len > 31) ? 31 : flow->https.url_len;
 					memcpy(new_node->host, flow->https.url_pos, copy_len);
 					new_node->host[copy_len] = '\0';
 				}
-				
+
 				new_node->uri[0] = '\0';
 			} else {
-				new_node->proto_type = 0;  
+				new_node->proto_type = 0;
 				new_node->host[0] = '\0';
 				new_node->uri[0] = '\0';
 			}
-			
+
 			new_node->update_time = ktime_get_real_seconds();
-			
-			
+
+
 			list_add(&new_node->list, &active_app_list);
 		}
 	}
-	
+
 	spin_unlock_bh(&active_app_list_lock);
 }
 
@@ -2919,10 +2919,10 @@ void af_update_active_app_list(af_client_info_t *client, flow_info_t *flow)
 active_app_node_t *af_find_active_app(u_int32_t app_id)
 {
 	active_app_node_t *node = NULL;
-	
+
 	if (app_id == 0)
 		return NULL;
-	
+
 	spin_lock_bh(&active_app_list_lock);
 	list_for_each_entry(node, &active_app_list, list) {
 		if (node->app_id == app_id) {
@@ -2931,7 +2931,7 @@ active_app_node_t *af_find_active_app(u_int32_t app_id)
 		}
 	}
 	spin_unlock_bh(&active_app_list_lock);
-	
+
 	return NULL;
 }
 
@@ -2939,7 +2939,7 @@ active_app_node_t *af_find_active_app(u_int32_t app_id)
 void af_clear_active_app_list(void)
 {
 	active_app_node_t *node = NULL, *tmp_node = NULL;
-	
+
 	spin_lock_bh(&active_app_list_lock);
 	list_for_each_entry_safe(node, tmp_node, &active_app_list, list) {
 		list_del(&node->list);
@@ -2966,15 +2966,15 @@ void af_update_active_host_list(af_client_info_t *client, flow_info_t *flow)
 	int list_count = 0;
 	char host_buf[64] = {0};
 	int host_len = 0;
-	
+
 	if (!client || !flow)
 		return;
-	
-	
+
+
 	if (!flow->http.match && !flow->https.match)
 		return;
-	
-	
+
+
 	if (flow->http.match && flow->http.host_pos && flow->http.host_len > 0) {
 		host_len = (flow->http.host_len > 63) ? 63 : flow->http.host_len;
 		memcpy(host_buf, flow->http.host_pos, host_len);
@@ -2984,19 +2984,19 @@ void af_update_active_host_list(af_client_info_t *client, flow_info_t *flow)
 		memcpy(host_buf, flow->https.url_pos, host_len);
 		host_buf[host_len] = '\0';
 	} else {
-		return;  
+		return;
 	}
 
 	if (af_is_invalid_active_host(host_buf))
 		return;
-	
+
 	spin_lock_bh(&active_host_list_lock);
-	
-	
+
+
 	list_for_each_entry_safe(node, tmp_node, &active_host_list, list) {
 		list_count++;
 		if (strncmp(node->host, host_buf, 64) == 0) {
-			
+
 			memcpy(node->mac, client->mac, MAC_ADDR_LEN);
 			node->src_ip = flow->src;
 			node->dst_ip = flow->dst;
@@ -3010,29 +3010,29 @@ void af_update_active_host_list(af_client_info_t *client, flow_info_t *flow)
 			node->dst_port = flow->dport;
 			node->l4_protocol = flow->l4_protocol;
 			node->drop = flow->drop;
-			
-			
+
+
 			if (flow->http.match) {
-				node->proto_type = 1;  
+				node->proto_type = 1;
 			} else if (flow->https.match) {
-				node->proto_type = 2;  
+				node->proto_type = 2;
 			} else {
-				node->proto_type = 0;  
+				node->proto_type = 0;
 			}
-			
+
 			node->update_time = ktime_get_real_seconds();
-			
-			
+
+
 			list_move(&node->list, &active_host_list);
-			
+
 			found = 1;
 			break;
 		}
 	}
-	
-	
+
+
 	if (!found) {
-		
+
 		if (list_count >= MAX_ACTIVE_HOST_LIST_SIZE) {
 			if (!list_empty(&active_host_list)) {
 				node = list_last_entry(&active_host_list, active_host_node_t, list);
@@ -3040,8 +3040,8 @@ void af_update_active_host_list(af_client_info_t *client, flow_info_t *flow)
 				kfree(node);
 			}
 		}
-		
-		
+
+
 		new_node = kzalloc(sizeof(active_host_node_t), GFP_ATOMIC);
 		if (new_node) {
 			INIT_LIST_HEAD(&new_node->list);
@@ -3060,23 +3060,23 @@ void af_update_active_host_list(af_client_info_t *client, flow_info_t *flow)
 			new_node->dst_port = flow->dport;
 			new_node->l4_protocol = flow->l4_protocol;
 			new_node->drop = flow->drop;
-			
-			
+
+
 			if (flow->http.match) {
-				new_node->proto_type = 1;  
+				new_node->proto_type = 1;
 			} else if (flow->https.match) {
-				new_node->proto_type = 2;  
+				new_node->proto_type = 2;
 			} else {
-				new_node->proto_type = 0;  
+				new_node->proto_type = 0;
 			}
-			
+
 			new_node->update_time = ktime_get_real_seconds();
-			
-			
+
+
 			list_add(&new_node->list, &active_host_list);
 		}
 	}
-	
+
 	spin_unlock_bh(&active_host_list_lock);
 }
 
@@ -3084,10 +3084,10 @@ void af_update_active_host_list(af_client_info_t *client, flow_info_t *flow)
 active_host_node_t *af_find_active_host(const char *host)
 {
 	active_host_node_t *node = NULL;
-	
+
 	if (!host || strlen(host) == 0)
 		return NULL;
-	
+
 	spin_lock_bh(&active_host_list_lock);
 	list_for_each_entry(node, &active_host_list, list) {
 		if (strncmp(node->host, host, 64) == 0) {
@@ -3096,7 +3096,7 @@ active_host_node_t *af_find_active_host(const char *host)
 		}
 	}
 	spin_unlock_bh(&active_host_list_lock);
-	
+
 	return NULL;
 }
 
@@ -3104,7 +3104,7 @@ active_host_node_t *af_find_active_host(const char *host)
 void af_clear_active_host_list(void)
 {
 	active_host_node_t *node = NULL, *tmp_node = NULL;
-	
+
 	spin_lock_bh(&active_host_list_lock);
 	list_for_each_entry_safe(node, tmp_node, &active_host_list, list) {
 		list_del(&node->list);
@@ -3142,17 +3142,17 @@ static int af_active_app_seq_show(struct seq_file *s, void *v)
 	char src_ip_str[64] = {0};
 	char dst_ip_str[64] = {0};
 	char proto_str[8] = {0};
-	
+
 	active_app_node_t *node = list_entry(v, active_app_node_t, list);
-	
-	
+
+
 	if (v == active_app_list.next)
 		print_active_app_header(s);
-	
-	
+
+
 	sprintf(mac_str, MAC_FMT, MAC_ARRAY(node->mac));
-	
-	
+
+
 	if (node->src_ip != 0) {
 		sprintf(src_ip_str, "%pI4", &node->src_ip);
 	} else {
@@ -3160,8 +3160,8 @@ static int af_active_app_seq_show(struct seq_file *s, void *v)
 		ipv6_to_str(&node->src_ip6, ip6_str);
 		sprintf(src_ip_str, "[%s]", ip6_str);
 	}
-	
-	
+
+
 	if (node->dst_ip != 0) {
 		sprintf(dst_ip_str, "%pI4", &node->dst_ip);
 	} else {
@@ -3169,8 +3169,8 @@ static int af_active_app_seq_show(struct seq_file *s, void *v)
 		ipv6_to_str(&node->dst_ip6, ip6_str);
 		sprintf(dst_ip_str, "[%s]", ip6_str);
 	}
-	
-	
+
+
 	switch (node->l4_protocol) {
 		case IPPROTO_TCP:
 			strcpy(proto_str, "TCP");
@@ -3182,25 +3182,25 @@ static int af_active_app_seq_show(struct seq_file *s, void *v)
 			sprintf(proto_str, "%d", node->l4_protocol);
 			break;
 	}
-	
-	
+
+
 	seq_printf(s, "%-6u %-18s %-16s %-8u %-16s %-8u %-6s %-8u %-5u %-32s  %-12u  %-32s\n",
 	           node->app_id,
 	           mac_str,
 	           src_ip_str,
-	         	 node->src_port,
+		 node->src_port,
 	           dst_ip_str,
 	           node->dst_port,
 	           proto_str,
-	           node->proto_type,  
+	           node->proto_type,
 	           node->drop,
 	           node->host[0] ? node->host : "-",
 	           node->update_time,
-			
-			   (node->proto_type == 1 && node->uri[0]) ? node->uri : "-"  
+
+			   (node->proto_type == 1 && node->uri[0]) ? node->uri : "-"
 
 			);
-	
+
 	return 0;
 }
 
@@ -3241,7 +3241,7 @@ int af_active_app_init_procfs(void)
 {
 	struct proc_dir_entry *pde;
 	struct net *net = &init_net;
-	
+
 	pde = proc_create(AF_ACTIVE_APP_PROC_STR, 0444, net->proc_net, &af_active_app_fops);
 	if (!pde) {
 		AF_ERROR("af_active_app proc file created error\n");
@@ -3286,17 +3286,17 @@ static int af_active_host_seq_show(struct seq_file *s, void *v)
 	char src_ip_str[64] = {0};
 	char dst_ip_str[64] = {0};
 	char proto_str[8] = {0};
-	
+
 	active_host_node_t *node = list_entry(v, active_host_node_t, list);
-	
-	
+
+
 	if (v == active_host_list.next)
 		print_active_host_header(s);
-	
-	
+
+
 	sprintf(mac_str, MAC_FMT, MAC_ARRAY(node->mac));
-	
-	
+
+
 	if (node->src_ip != 0) {
 		sprintf(src_ip_str, "%pI4", &node->src_ip);
 	} else {
@@ -3304,8 +3304,8 @@ static int af_active_host_seq_show(struct seq_file *s, void *v)
 		ipv6_to_str(&node->src_ip6, ip6_str);
 		sprintf(src_ip_str, "[%s]", ip6_str);
 	}
-	
-	
+
+
 	if (node->dst_ip != 0) {
 		sprintf(dst_ip_str, "%pI4", &node->dst_ip);
 	} else {
@@ -3313,8 +3313,8 @@ static int af_active_host_seq_show(struct seq_file *s, void *v)
 		ipv6_to_str(&node->dst_ip6, ip6_str);
 		sprintf(dst_ip_str, "[%s]", ip6_str);
 	}
-	
-	
+
+
 	switch (node->l4_protocol) {
 		case IPPROTO_TCP:
 			strcpy(proto_str, "TCP");
@@ -3326,8 +3326,8 @@ static int af_active_host_seq_show(struct seq_file *s, void *v)
 			sprintf(proto_str, "%d", node->l4_protocol);
 			break;
 	}
-	
-	
+
+
 	seq_printf(s, "%-48s %-18s %-16s %-8u %-16s %-8u %-6s %-8u %-5u %-12u\n",
 	           node->host,
 	           mac_str,
@@ -3336,10 +3336,10 @@ static int af_active_host_seq_show(struct seq_file *s, void *v)
 	           dst_ip_str,
 	           node->dst_port,
 	           proto_str,
-	           node->proto_type,  
+	           node->proto_type,
 	           node->drop,
 	           node->update_time);
-	
+
 	return 0;
 }
 
@@ -3380,7 +3380,7 @@ int af_active_host_init_procfs(void)
 {
 	struct proc_dir_entry *pde;
 	struct net *net = &init_net;
-	
+
 	pde = proc_create(AF_ACTIVE_HOST_PROC_STR, 0444, net->proc_net, &af_active_host_fops);
 	if (!pde) {
 		AF_ERROR("af_active_host proc file created error\n");

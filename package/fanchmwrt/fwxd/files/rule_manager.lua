@@ -9,9 +9,9 @@ if not has_jsonc then
     jsonc = nil
 end
 
-local CHECK_INTERVAL = 10  
-local LOG_FILE = "/tmp/log/rule_manager.log" 
-local SINGLE_MAC_FILTER_RULE_ID = 101  
+local CHECK_INTERVAL = 10
+local LOG_FILE = "/tmp/log/rule_manager.log"
+local SINGLE_MAC_FILTER_RULE_ID = 101
 local BLACKLIST_MAC_FILTER_RULE_ID = 102
 local USER_PARENTAL_CONTROL_STATUS_FILE = "/tmp/fwx_cache/user_parental_control_status"
 local USER_PARENTAL_CONTROL_DETAIL_FILE = "/tmp/fwx_cache/user_parental_control_detail.json"
@@ -31,12 +31,12 @@ local APPFILTER_WHITELIST_STATE_FILE = "/tmp/appfilter_whitelist_state"
 local MACFILTER_WHITELIST_STATE_FILE = "/tmp/macfilter_whitelist_state"
 local RECORD_WHITELIST_STATE_FILE = "/tmp/record_whitelist_state"
 
-local appfilter_rules_state = {} 
+local appfilter_rules_state = {}
 local macfilter_rules_state = {}
 
 local appfilter_enable_state = nil
 local macfilter_enable_state = nil
-local record_enable_state = nil  
+local record_enable_state = nil
 
 local function ensure_log_dir()
     os.execute(string.format("mkdir -p %s", string.match(LOG_FILE, "^(.*)/")))
@@ -69,11 +69,11 @@ end
 local function get_current_time_info()
     local now = os.time()
     local date = os.date("*t", now)
-    
+
     local weekday = date.wday - 1
-    
+
     local current_minutes = date.hour * 60 + date.min
-    
+
     return {
         weekday = weekday,
         hour = date.hour,
@@ -86,7 +86,7 @@ local function parse_time(time_str)
     if not time_str or time_str == "" then
         return nil
     end
-    
+
     local hour, min = time_str:match("(%d+):(%d+)")
     if hour and min then
         return tonumber(hour) * 60 + tonumber(min)
@@ -98,7 +98,7 @@ local function is_time_in_range(time_rules, current_info)
     if not time_rules or #time_rules == 0 then
         return false
     end
-    
+
     for _, time_rule in ipairs(time_rules) do
         if time_rule.weekdays and time_rule.start_time and time_rule.end_time then
             local weekday_match = false
@@ -108,11 +108,11 @@ local function is_time_in_range(time_rules, current_info)
                     break
                 end
             end
-            
+
             if weekday_match then
                 local start_minutes = parse_time(time_rule.start_time)
                 local end_minutes = parse_time(time_rule.end_time)
-                
+
                 if start_minutes and end_minutes then
                     if start_minutes <= end_minutes then
                         if current_info.minutes >= start_minutes and current_info.minutes <= end_minutes then
@@ -127,7 +127,7 @@ local function is_time_in_range(time_rules, current_info)
             end
         end
     end
-    
+
     return false
 end
 
@@ -146,13 +146,13 @@ local function write_to_dev_fwx(json_str)
         payload = string.sub(payload, 1, 1024) .. "..."
     end
     log(string.format("write_to_dev_fwx: payload(len=%d): %s", payload_len, payload))
-    
+
     local file = io.open(dev_file, "w")
     if not file then
         log(string.format("ERROR: Failed to open %s for writing", dev_file))
         return false
     end
-    
+
     file:write(json_str)
     file:close()
     return true
@@ -185,7 +185,7 @@ end
 
 local function set_appfilter_rule_mac_list(rule_id, mac_list)
     log(string.format("AppFilter: Setting MAC list for rule %d, count=%d", rule_id, #mac_list))
-    
+
     local mac_array_str = ""
     if #mac_list > 0 then
         local mac_strs = {}
@@ -196,8 +196,8 @@ local function set_appfilter_rule_mac_list(rule_id, mac_list)
     else
         mac_array_str = "[]"
     end
-    
-    local json_str = string.format('{"api":"mod_app_filter_rule","data":{"rule_id":%d,"mac_action":1,"mac_list":%s}}', 
+
+    local json_str = string.format('{"api":"mod_app_filter_rule","data":{"rule_id":%d,"mac_action":1,"mac_list":%s}}',
         rule_id, mac_array_str)
     if write_to_dev_fwx(json_str) then
         log(string.format("AppFilter: MAC list for rule %d set successfully", rule_id))
@@ -210,7 +210,7 @@ end
 
 local function set_appfilter_rule_app_id_list(rule_id, app_id_list)
     log(string.format("AppFilter: Setting App ID list for rule %d, count=%d", rule_id, #app_id_list))
-    
+
     local app_id_array_str = ""
     if #app_id_list > 0 then
         local app_id_strs = {}
@@ -218,13 +218,13 @@ local function set_appfilter_rule_app_id_list(rule_id, app_id_list)
             local token = tostring(app_id)
             token = token:gsub("\\", "\\\\"):gsub("\"", "\\\"")
             table.insert(app_id_strs, string.format('"%s"', token))
-        end 
+        end
         app_id_array_str = "[" .. table.concat(app_id_strs, ",") .. "]"
     else
         app_id_array_str = "[]"
     end
-    
-    local json_str = string.format('{"api":"mod_app_filter_rule","data":{"rule_id":%d,"app_action":1,"app_id_list":%s}}', 
+
+    local json_str = string.format('{"api":"mod_app_filter_rule","data":{"rule_id":%d,"app_action":1,"app_id_list":%s}}',
         rule_id, app_id_array_str)
     if write_to_dev_fwx(json_str) then
         log(string.format("AppFilter: App ID list for rule %d set successfully", rule_id))
@@ -292,25 +292,25 @@ local function set_macfilter_rule_mac_list(rule_id, mac_list, mode)
         rule_mode = MACFILTER_RULE_MODE_ALL_USERS
     end
     log(string.format("MACFilter: Setting MAC list for rule %d, mode=%d, count=%d", rule_id, rule_mode, #mac_list))
-    
+
     local clear_json = string.format('{"api":"mod_mac_filter_rule","data":{"rule_id":%d,"mode":%d,"mac_action":0}}', rule_id, rule_mode)
     if not write_to_dev_fwx(clear_json) then
         log(string.format("MACFilter: Failed to clear MAC list for rule %d", rule_id))
         return false
     end
-    
+
     if #mac_list == 0 then
         log(string.format("MACFilter: MAC list for rule %d cleared (empty list, no MACs to set)", rule_id))
         return true
     end
-    
+
     local mac_strs = {}
     for _, mac in ipairs(mac_list) do
         table.insert(mac_strs, string.format('"%s"', mac))
     end
     local mac_array_str = "[" .. table.concat(mac_strs, ",") .. "]"
-    
-    local json_str = string.format('{"api":"mod_mac_filter_rule","data":{"rule_id":%d,"mode":%d,"mac_action":1,"mac_list":%s}}', 
+
+    local json_str = string.format('{"api":"mod_mac_filter_rule","data":{"rule_id":%d,"mode":%d,"mac_action":1,"mac_list":%s}}',
         rule_id, rule_mode, mac_array_str)
     if write_to_dev_fwx(json_str) then
         log(string.format("MACFilter: MAC list for rule %d set successfully", rule_id))
@@ -328,7 +328,7 @@ local function uci_get_all_sections(config, section_type)
     if not handle then
         return sections
     end
-    
+
     local seen_ids = {}
     for line in handle:lines() do
         local section_path = line:match("^([^=]+)=")
@@ -344,17 +344,17 @@ local function uci_get_all_sections(config, section_type)
         end
     end
     handle:close()
-    
+
     table.sort(sections)
     return sections
 end
 
 local function load_appfilter_rules()
     log("=== Loading AppFilter rules from UCI ===")
-    
+
     local uci_cursor = uci.cursor()
     local rules = {}
-    
+
     uci_cursor:foreach("appfilter", "rule", function(section)
         local rule = {
             id = tonumber(section.id) or 0,
@@ -366,7 +366,7 @@ local function load_appfilter_rules()
             time_rules = {},
             app_ids = {}
         }
-        
+
         if section.app_id then
             local app_ids = type(section.app_id) == "table" and section.app_id or {section.app_id}
             for _, app_id_token in ipairs(app_ids) do
@@ -375,7 +375,7 @@ local function load_appfilter_rules()
                 end
             end
         end
-        
+
         if section.time_rule then
             local time_rules = type(section.time_rule) == "table" and section.time_rule or {section.time_rule}
             for _, time_rule_str in ipairs(time_rules) do
@@ -384,12 +384,12 @@ local function load_appfilter_rules()
                     for part in time_rule_str:gmatch("[^,]+") do
                         table.insert(parts, part)
                     end
-                    
+
                     if #parts >= 3 then
                         local weekdays = {}
                         local start_time = nil
                         local end_time = nil
-                        
+
                         for i, part in ipairs(parts) do
                             if part:match(":") then
                                 if not start_time then
@@ -404,7 +404,7 @@ local function load_appfilter_rules()
                                 end
                             end
                         end
-                        
+
                         if start_time and end_time and #weekdays > 0 then
                             table.insert(rule.time_rules, {
                                 weekdays = weekdays,
@@ -416,12 +416,12 @@ local function load_appfilter_rules()
                 end
             end
         end
-        
+
         table.insert(rules, rule)
     end)
-    
+
     uci_cursor:unload("appfilter")
-    
+
     log(string.format("Loaded %d AppFilter rules", #rules))
     return rules
 end
@@ -617,7 +617,7 @@ local function load_macfilter_rules()
         end
         return result
     end
-    
+
     uci_cursor:foreach("macfilter", "rule", function(section)
         local rule = {
             id = tonumber(section.id) or 0,
@@ -666,12 +666,12 @@ local function load_macfilter_rules()
                 parse_macfilter_time_rule(rule, time_rule_str)
             end
         end
-        
+
         table.insert(rules, rule)
     end)
-    
+
     uci_cursor:unload("macfilter")
-    
+
     log(string.format("Loaded %d MACFilter rules", #rules))
     return rules
 end
@@ -1169,9 +1169,9 @@ local function sync_effective_mac_rule(rule_id, rule_name, mac_list)
 end
 
 local function process_appfilter_rules(current_info)
-    log(string.format("=== Processing AppFilter rules (time: %02d:%02d, weekday: %d) ===", 
+    log(string.format("=== Processing AppFilter rules (time: %02d:%02d, weekday: %d) ===",
         current_info.hour, current_info.min, current_info.weekday))
-    
+
     local rules = load_appfilter_rules()
     local appfilter_effective_mac_set = {}
     local appfilter_all_users_active = false
@@ -1181,25 +1181,25 @@ local function process_appfilter_rules(current_info)
     for _, rule in ipairs(rules) do
         rule_map[tonumber(rule.id) or 0] = rule
     end
-    
+
     for _, rule in ipairs(rules) do
         local time_match = is_time_in_range(rule.time_rules, current_info)
         local should_active = (rule.enabled == 1) and time_match
         local current_state = appfilter_rules_state[rule.id]
         local is_active = current_state and current_state.active or false
-        
-        log(string.format("AppFilter rule %d (%s): enabled=%d, time_match=%s, should_active=%s, is_active=%s", 
+
+        log(string.format("AppFilter rule %d (%s): enabled=%d, time_match=%s, should_active=%s, is_active=%s",
             rule.id, rule.name, rule.enabled, tostring(time_match), tostring(should_active), tostring(is_active)))
-        
+
         if should_active then
             local mac_list = {}
             if rule.mode == 2 and rule.user_mac and rule.user_mac ~= "" then
                 table.insert(mac_list, rule.user_mac)
             elseif rule.mode == 1 then
             end
-            
+
             local app_id_list = rule.app_ids or {}
-            
+
             local config_changed = false
             if not current_state then
                 config_changed = true
@@ -1220,7 +1220,7 @@ local function process_appfilter_rules(current_info)
                         end
                     end
                 end
-                
+
                 if not config_changed then
                     if #app_id_list ~= (current_state.app_id_list and #current_state.app_id_list or 0) then
                         config_changed = true
@@ -1246,7 +1246,7 @@ local function process_appfilter_rules(current_info)
                     end
                 end
             end
-            
+
             if not is_active or config_changed then
                 if is_active then
                     log(string.format("AppFilter rule %d (%s): config changed, recreating", rule.id, rule.name))
@@ -1254,16 +1254,16 @@ local function process_appfilter_rules(current_info)
                 else
                     log(string.format("AppFilter rule %d (%s): activating", rule.id, rule.name))
                 end
-                
+
                 if create_appfilter_rule(rule.id) then
                     if not appfilter_rules_state[rule.id] then
                         appfilter_rules_state[rule.id] = {}
                     end
-                    
+
                     if set_appfilter_rule_mac_list(rule.id, mac_list) then
                         appfilter_rules_state[rule.id].mac_list = mac_list
                     end
-                    
+
                     if set_appfilter_rule_app_id_list(rule.id, app_id_list) then
                         appfilter_rules_state[rule.id].app_id_list = app_id_list
                     end
@@ -1271,7 +1271,7 @@ local function process_appfilter_rules(current_info)
                     if set_appfilter_rule_filter_quic(rule.id, rule.filter_quic) then
                         appfilter_rules_state[rule.id].filter_quic = tonumber(rule.filter_quic) or 0
                     end
-                    
+
                     appfilter_rules_state[rule.id].active = true
                     appfilter_rules_state[rule.id].name = rule.name
                     appfilter_rules_state[rule.id].mode = rule.mode
@@ -1283,7 +1283,7 @@ local function process_appfilter_rules(current_info)
             end
         else
             if is_active then
-                log(string.format("AppFilter rule %d (%s): deactivating (enabled=%d, time_match=%s)", 
+                log(string.format("AppFilter rule %d (%s): deactivating (enabled=%d, time_match=%s)",
                     rule.id, rule.name, rule.enabled, tostring(time_match)))
                 if delete_appfilter_rule(rule.id) then
                     appfilter_rules_state[rule.id].active = false
@@ -1292,7 +1292,7 @@ local function process_appfilter_rules(current_info)
             end
         end
     end
-    
+
     for rule_id, state in pairs(appfilter_rules_state) do
         local found = false
         for _, rule in ipairs(rules) do
@@ -1337,11 +1337,11 @@ local function process_appfilter_rules(current_info)
 end
 
 local function process_macfilter_rules(current_info)
-    log(string.format("=== Processing MACFilter rules (time: %02d:%02d, weekday: %d) ===", 
+    log(string.format("=== Processing MACFilter rules (time: %02d:%02d, weekday: %d) ===",
         current_info.hour, current_info.min, current_info.weekday))
-    
+
     local rules = load_macfilter_rules()
-    
+
     local all_user_rules = {}
     local regular_mac_set = {}
     local blacklist_mac_set = {}
@@ -1350,7 +1350,7 @@ local function process_macfilter_rules(current_info)
     local blacklist_macs = load_mac_blacklist()
     local macfilter_detail_map = {}
     local all_user_range_rule_details = {}
-    
+
     for _, rule in ipairs(rules) do
         if rule.enabled == 1 then
             local time_mode = tonumber(rule.time_mode) or TIME_MODE_RANGE
@@ -1372,8 +1372,8 @@ local function process_macfilter_rules(current_info)
             end
         end
     end
-    
-    log(string.format("MACFilter: Found %d time-range all-user rules, %d duration rules, %d flow rules (effective-mac-list mode)", 
+
+    log(string.format("MACFilter: Found %d time-range all-user rules, %d duration rules, %d flow rules (effective-mac-list mode)",
         #all_user_rules, #duration_rules, #flow_rules))
 
     local user_active_map = nil
@@ -1409,7 +1409,7 @@ local function process_macfilter_rules(current_info)
             log("MACFilter all-user range: skip because user stat unavailable")
         end
     end
-    
+
     if #duration_rules > 0 then
         if not user_active_map or not user_mac_list then
             log("MACFilter duration mode: failed to get user active minutes, skipping duration match this round")
@@ -1594,7 +1594,7 @@ local function process_macfilter_rules(current_info)
 
     sync_effective_mac_rule(SINGLE_MAC_FILTER_RULE_ID, "MAC Filter (Effective List)", regular_mac_list)
     sync_effective_mac_rule(BLACKLIST_MAC_FILTER_RULE_ID, "Internet Blacklist (Effective List)", blacklist_mac_list)
-    
+
     for rule_id, state in pairs(macfilter_rules_state) do
         if rule_id ~= SINGLE_MAC_FILTER_RULE_ID and rule_id ~= BLACKLIST_MAC_FILTER_RULE_ID then
             local found = false
@@ -1662,7 +1662,7 @@ end
 local function check_and_apply_appfilter_enable()
     local current_enable = get_uci_enable("fwx", "appfilter", "enable")
     if appfilter_enable_state == nil or appfilter_enable_state ~= current_enable then
-        log(string.format("AppFilter enable changed: %s -> %d", 
+        log(string.format("AppFilter enable changed: %s -> %d",
             appfilter_enable_state == nil and "nil" or tostring(appfilter_enable_state), current_enable))
         if apply_appfilter_enable(current_enable) then
             appfilter_enable_state = current_enable
@@ -1673,7 +1673,7 @@ end
 local function check_and_apply_macfilter_enable()
     local current_enable = get_uci_enable("fwx", "macfilter", "enable")
     if macfilter_enable_state == nil or macfilter_enable_state ~= current_enable then
-        log(string.format("MACFilter enable changed: %s -> %d", 
+        log(string.format("MACFilter enable changed: %s -> %d",
             macfilter_enable_state == nil and "nil" or tostring(macfilter_enable_state), current_enable))
         if apply_macfilter_enable(current_enable) then
             macfilter_enable_state = current_enable
@@ -1699,7 +1699,7 @@ end
 local function check_and_apply_record_enable()
     local current_enable = get_uci_enable("fwx", "record", "enable")
     if record_enable_state == nil or record_enable_state ~= current_enable then
-        log(string.format("Record enable changed: %s -> %d", 
+        log(string.format("Record enable changed: %s -> %d",
             record_enable_state == nil and "nil" or tostring(record_enable_state), current_enable))
         if apply_record_enable(current_enable) then
             record_enable_state = current_enable
@@ -1712,10 +1712,10 @@ local function check_state_file(file_path)
     if not file then
         return false
     end
-    
+
     local content = file:read("*line")
     file:close()
-    
+
     return (content == "1")
 end
 
@@ -1735,7 +1735,7 @@ local function check_reinit_flags()
     local appfilter_whitelist_reinit = check_state_file(APPFILTER_WHITELIST_STATE_FILE)
     local macfilter_whitelist_reinit = check_state_file(MACFILTER_WHITELIST_STATE_FILE)
     local record_whitelist_reinit = check_state_file(RECORD_WHITELIST_STATE_FILE)
-    
+
     return appfilter_reinit, macfilter_reinit, appfilter_whitelist_reinit, macfilter_whitelist_reinit, record_whitelist_reinit
 end
 
@@ -1789,38 +1789,38 @@ end
 
 local function load_appfilter_whitelist()
     log("=== Loading AppFilter whitelist from UCI ===")
-    
+
     local uci_cursor = uci.cursor()
     local mac_list = {}
-    
+
     uci_cursor:foreach("appfilter_whitelist", "whitelist_mac", function(section)
         local mac = section.mac or ""
         if mac and mac ~= "" then
             table.insert(mac_list, mac)
         end
     end)
-    
+
     uci_cursor:unload("appfilter_whitelist")
-    
+
     log(string.format("AppFilter whitelist: loaded %d MAC addresses", #mac_list))
     return mac_list
 end
 
 local function load_macfilter_whitelist()
     log("=== Loading MACFilter whitelist from UCI ===")
-    
+
     local uci_cursor = uci.cursor()
     local mac_list = {}
-    
+
     uci_cursor:foreach("macfilter_whitelist", "whitelist_mac", function(section)
         local mac = section.mac or ""
         if mac and mac ~= "" then
             table.insert(mac_list, mac)
         end
     end)
-    
+
     uci_cursor:unload("macfilter_whitelist")
-    
+
     log(string.format("MACFilter whitelist: loaded %d MAC addresses", #mac_list))
     return mac_list
 end
@@ -1866,16 +1866,16 @@ end
 
 local function apply_appfilter_whitelist(mac_list)
     log(string.format("=== Applying AppFilter whitelist, count=%d ===", #mac_list))
-    
+
     flush_appfilter_whitelist()
-    
+
     if #mac_list > 0 then
         local mac_strs = {}
         for _, mac in ipairs(mac_list) do
             table.insert(mac_strs, string.format('"%s"', mac))
         end
         local mac_array_str = "[" .. table.concat(mac_strs, ",") .. "]"
-        
+
         local json_str = string.format('{"api":"add_app_filter_whitelist","data":{"mac_list":%s}}', mac_array_str)
         if write_to_dev_fwx(json_str) then
             log(string.format("AppFilter whitelist applied successfully: %d MACs", #mac_list))
@@ -1892,16 +1892,16 @@ end
 
 local function apply_macfilter_whitelist(mac_list)
     log(string.format("=== Applying MACFilter whitelist, count=%d ===", #mac_list))
-    
+
     flush_macfilter_whitelist()
-    
+
     if #mac_list > 0 then
         local mac_strs = {}
         for _, mac in ipairs(mac_list) do
             table.insert(mac_strs, string.format('"%s"', mac))
         end
         local mac_array_str = "[" .. table.concat(mac_strs, ",") .. "]"
-        
+
         local json_str = string.format('{"api":"add_mac_filter_whitelist","data":{"mac_list":%s}}', mac_array_str)
         if write_to_dev_fwx(json_str) then
             log(string.format("MACFilter whitelist applied successfully: %d MACs", #mac_list))
@@ -1950,28 +1950,28 @@ end
 
 local function flush_all_rules()
     log("=== Flushing all rules before initialization ===")
-    
+
     local json_str = '{"api":"flush_mac_filter_rule","data":{}}'
     if write_to_dev_fwx(json_str) then
         log("MAC filter rules flushed")
     else
         log("Failed to flush MAC filter rules")
     end
-    
+
     json_str = '{"api":"flush_app_filter_rule","data":{}}'
     if write_to_dev_fwx(json_str) then
         log("App filter rules flushed")
     else
         log("Failed to flush App filter rules")
     end
-    
+
     json_str = '{"api":"flush_mac_filter_whitelist","data":{}}'
     if write_to_dev_fwx(json_str) then
         log("MAC filter whitelist flushed")
     else
         log("Failed to flush MAC filter whitelist")
     end
-    
+
     json_str = '{"api":"flush_app_filter_whitelist","data":{}}'
     if write_to_dev_fwx(json_str) then
         log("App filter whitelist flushed")
@@ -1984,7 +1984,7 @@ local function flush_all_rules()
     else
         log("Failed to flush Record whitelist")
     end
-    
+
     log("All rules flushed successfully")
     return true
 end
@@ -1993,10 +1993,10 @@ local function initialize_rules()
     flush_all_rules()
     check_and_apply_appfilter_enable()
     check_and_apply_macfilter_enable()
-    check_and_apply_record_enable()  
-    
+    check_and_apply_record_enable()
+
     init_effective_mac_rules()
-    
+
     local appfilter_rules = load_appfilter_rules()
     for _, rule in ipairs(appfilter_rules) do
         appfilter_rules_state[rule.id] = {
@@ -2006,7 +2006,7 @@ local function initialize_rules()
             filter_quic = tonumber(rule.filter_quic) or 0
         }
     end
-    
+
     local macfilter_rules = load_macfilter_rules()
     for _, rule in ipairs(macfilter_rules) do
         macfilter_rules_state[rule.id] = {
@@ -2016,33 +2016,33 @@ local function initialize_rules()
             user_mac = rule.user_mac
         }
     end
-    
-    log(string.format("Initialized: %d AppFilter rules, %d MACFilter rules", 
+
+    log(string.format("Initialized: %d AppFilter rules, %d MACFilter rules",
         #appfilter_rules, #macfilter_rules))
-    
+
     log("=== Loading whitelists ===")
     local appfilter_whitelist = load_appfilter_whitelist()
     apply_appfilter_whitelist(appfilter_whitelist)
-    
+
     local macfilter_whitelist = load_macfilter_whitelist()
     apply_macfilter_whitelist(macfilter_whitelist)
 
     local record_whitelist = load_record_whitelist()
     apply_record_whitelist(record_whitelist)
-    
+
     log("Whitelists initialized successfully")
 end
 
 local function main_loop()
     log("Rule manager started")
-    
+
     initialize_rules()
-    
+
     local running = true
-    
+
     while running do
         local appfilter_reinit, macfilter_reinit, appfilter_whitelist_reinit, macfilter_whitelist_reinit, record_whitelist_reinit = check_reinit_flags()
-        
+
         if appfilter_whitelist_reinit then
             log("=== AppFilter whitelist state file detected change, reloading ===")
             local appfilter_whitelist = load_appfilter_whitelist()
@@ -2053,7 +2053,7 @@ local function main_loop()
                 log("Failed to reset AppFilter whitelist state file")
             end
         end
-        
+
         if macfilter_whitelist_reinit then
             log("=== MACFilter whitelist state file detected change, reloading ===")
             local macfilter_whitelist = load_macfilter_whitelist()
@@ -2075,13 +2075,13 @@ local function main_loop()
                 log("Failed to reset Record whitelist state file")
             end
         end
-        
+
         if appfilter_reinit then
             log("=== AppFilter rules state file detected change, reinitializing ===")
             flush_appfilter_rules()
-            
+
             check_and_apply_appfilter_enable()
-            
+
             appfilter_rules_state = {}
             local appfilter_rules = load_appfilter_rules()
             for _, rule in ipairs(appfilter_rules) do
@@ -2099,12 +2099,12 @@ local function main_loop()
                 log("Failed to reset AppFilter state file")
             end
         end
-        
+
         if macfilter_reinit then
             flush_macfilter_rules()
-            
+
             check_and_apply_macfilter_enable()
-            
+
             macfilter_rules_state = {}
             init_effective_mac_rules()
             local macfilter_rules = load_macfilter_rules()
@@ -2123,7 +2123,7 @@ local function main_loop()
                 log("Failed to reset MACFilter state file")
             end
         end
-        
+
         local current_info = get_current_time_info()
         local appfilter_effective_mac_set = {}
         local appfilter_all_users_active = false
@@ -2131,7 +2131,7 @@ local function main_loop()
         local appfilter_all_user_rule_details = {}
         local macfilter_block_set = {}
         local macfilter_detail_map = {}
-        
+
         local ok, err = pcall(function()
             appfilter_effective_mac_set, appfilter_all_users_active, appfilter_detail_map, appfilter_all_user_rule_details =
                 process_appfilter_rules(current_info)
@@ -2139,7 +2139,7 @@ local function main_loop()
             macfilter_block_set = macfilter_block_set or {}
             macfilter_detail_map = macfilter_detail_map or {}
         end)
-        
+
         if not ok then
             log("ERROR processing rules: " .. tostring(err))
         end

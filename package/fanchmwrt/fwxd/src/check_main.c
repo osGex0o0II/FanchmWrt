@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <unistd.h>
 #include <stdlib.h>
@@ -30,7 +30,7 @@ static int check_thread_running = 0;
 static int check_thread_exit = 0;
 
 static struct {
-    u_int32_t last_exec_time;    
+    u_int32_t last_exec_time;
 } g_internet_check_state = {0};
 
 static void update_network_status_file(void)
@@ -50,35 +50,35 @@ static void update_network_status_file(void)
 static int resolve_hostname(const char *host, char *ip_str, size_t ip_str_len) {
     struct addrinfo hints, *result = NULL, *rp = NULL;
     int ret = -1;
-    
+
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;  
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    
+
     ret = getaddrinfo(host, NULL, &hints, &result);
     if (ret != 0) {
         LOG_DEBUG("check_tcp_connect: getaddrinfo() failed for %s: %s\n", host, gai_strerror(ret));
         return -1;
     }
-    
+
 
     for (rp = result; rp != NULL; rp = rp->ai_next) {
         if (rp->ai_family == AF_INET) {
             struct sockaddr_in *sin = (struct sockaddr_in *)rp->ai_addr;
             if (inet_ntop(AF_INET, &sin->sin_addr, ip_str, ip_str_len) != NULL) {
-                ret = 0;  
+                ret = 0;
                 break;
             }
         }
     }
-    
+
     freeaddrinfo(result);
-    
+
     if (ret != 0) {
         LOG_DEBUG("check_tcp_connect: failed to resolve %s to IPv4 address\n", host);
         return -1;
     }
-    
+
     LOG_DEBUG("check_tcp_connect: resolved %s to %s\n", host, ip_str);
     return 0;
 }
@@ -92,9 +92,9 @@ static int check_tcp_connect(const char *host, int port, int timeout_sec) {
     int result = -1;
     char ip_str[INET_ADDRSTRLEN] = {0};
     const char *target_ip = host;
-    
+
     LOG_DEBUG("check_tcp_connect: host=%s, port=%d, timeout_sec=%d\n", host, port, timeout_sec);
-    
+
 
     if (inet_pton(AF_INET, host, &server_addr.sin_addr) <= 0) {
 
@@ -104,14 +104,14 @@ static int check_tcp_connect(const char *host, int port, int timeout_sec) {
         }
         target_ip = ip_str;
     }
-    
+
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         LOG_DEBUG("check_tcp_connect: socket() failed: %s\n", strerror(errno));
         return -1;
     }
-    
+
 
     flags = fcntl(sockfd, F_GETFL, 0);
     if (flags < 0) {
@@ -122,7 +122,7 @@ static int check_tcp_connect(const char *host, int port, int timeout_sec) {
         close(sockfd);
         return -1;
     }
-    
+
 
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
@@ -132,7 +132,7 @@ static int check_tcp_connect(const char *host, int port, int timeout_sec) {
         close(sockfd);
         return -1;
     }
-    
+
 
     int connect_result = connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
     if (connect_result == 0) {
@@ -143,10 +143,10 @@ static int check_tcp_connect(const char *host, int port, int timeout_sec) {
         fd_set write_fds;
         FD_ZERO(&write_fds);
         FD_SET(sockfd, &write_fds);
-        
+
         timeout.tv_sec = timeout_sec;
         timeout.tv_usec = 0;
-        
+
         int select_result = select(sockfd + 1, NULL, &write_fds, NULL, &timeout);
         if (select_result > 0 && FD_ISSET(sockfd, &write_fds)) {
 
@@ -154,14 +154,14 @@ static int check_tcp_connect(const char *host, int port, int timeout_sec) {
             socklen_t len = sizeof(so_error);
             if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &so_error, &len) == 0 && so_error == 0) {
                 LOG_DEBUG("check_tcp_connect: tcp connect to %s:%d success\n", host, port);
-                result = 0;  
+                result = 0;
             }
             else{
                 LOG_DEBUG("check_tcp_connect: tcp connect to %s:%d failed: %s\n", host, port, strerror(so_error));
             }
         }
     }
-    
+
     close(sockfd);
     return result;
 }
@@ -177,18 +177,18 @@ static int check_ping(const char *host) {
 	if (strlen(result_buf) > 0){
 		return 0;
 	}
-    return -1;  
+    return -1;
 }
 
 static int __check_internet_connectivity(void) {
     int ping_success = 0;
     int tcp_success = 0;
-    
+
     if (check_ping("www.baidu.com") == 0) {
         ping_success = 1;
 		return 1;
     }
-    
+
     if (check_tcp_connect("www.baidu.com", 443, 2) == 0) {
         tcp_success = 1;
 		return 1;
@@ -202,18 +202,18 @@ static void check_internet_connectivity(void) {
 	static int last_internet = -1;
 	int status = __check_internet_connectivity();
 	if (status){
-		g_fwx_status.internet = 0; 
+		g_fwx_status.internet = 0;
 		fail_count = 0;
 	}
 	else{
 		fail_count++;
 		if (fail_count > 2){
-			g_fwx_status.internet = 1; 
+			g_fwx_status.internet = 1;
 		}
 	}
 	if (last_internet != -1 && last_internet != g_fwx_status.internet){
 		LOG_WARN("internet change %d--->%d\n", last_internet, g_fwx_status.internet);
-	}	
+	}
 	last_internet = g_fwx_status.internet;
 	update_network_status_file();
 }
@@ -236,24 +236,24 @@ static void check_and_cleanup_log_dir(void) {
 
 static void* check_thread_func(void *arg) {
     LOG_DEBUG("check_thread: thread function started\n");
-    
+
     check_thread_running = 1;
     LOG_DEBUG("check_thread: running\n");
-    
+
     check_internet_connectivity();
     check_and_cleanup_log_dir();
     g_internet_check_state.last_exec_time = time(NULL);
-    
+
     while (!check_thread_exit) {
         sleep(INTERNET_CHECK_INTERVAL);
-        
+
         if (!check_thread_exit) {
             check_internet_connectivity();
             check_and_cleanup_log_dir();
             g_internet_check_state.last_exec_time = time(NULL);
         }
     }
-    
+
     check_thread_running = 0;
     LOG_DEBUG("check_thread: exited\n");
     return NULL;
@@ -261,10 +261,10 @@ static void* check_thread_func(void *arg) {
 
 int start_check_thread(void) {
     int ret;
-    
+
     check_thread_exit = 0;
     check_thread_running = 0;
-    
+
     ret = pthread_create(&check_thread, NULL, check_thread_func, NULL);
     if (ret != 0) {
         LOG_ERROR("Failed to create check_thread: %s\n", strerror(ret));

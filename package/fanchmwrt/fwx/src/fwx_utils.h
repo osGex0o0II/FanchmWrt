@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #ifndef AF_UTILS_H
 #define AF_UTILS_H
@@ -21,4 +21,3 @@ int k_atoi(const char *str);
 void print_hex_ascii(const unsigned char *data, size_t size);
 
 #endif
-

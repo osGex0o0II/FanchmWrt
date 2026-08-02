@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <stdio.h>
 #include <string.h>
@@ -101,7 +101,7 @@ int config_get_appfilter_enable(void)
 	enable = fwx_uci_get_int_value(ctx, "appfilter.global.enable");
     if (enable < 0)
         enable = 0;
-    
+
 	uci_free_context(ctx);
     return enable;
 }

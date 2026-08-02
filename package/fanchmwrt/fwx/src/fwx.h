@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #ifndef __FWX_H__
 #define __FWX_H__
@@ -26,7 +26,7 @@
 #define MAX_DPI_PKT_NUM 64
 #define MIN_HTTP_DATA_LEN 16
 #define MAX_APP_NAME_LEN 64
-#define MAX_FEATURE_NUM_PER_APP 16 
+#define MAX_FEATURE_NUM_PER_APP 16
 #define MIN_FEATURE_STR_LEN 8
 #define MAX_FEATURE_STR_LEN 128
 #define MAX_HOST_URL_LEN 128
@@ -191,7 +191,7 @@ typedef struct af_mac_info {
 
 typedef struct flow_info{
 	struct nf_conn *ct;
-	u_int32_t src; 
+	u_int32_t src;
 	u_int32_t dst;
 	struct in6_addr *src6;
 	struct in6_addr *dst6;
@@ -219,38 +219,38 @@ typedef struct flow_info{
 
 
 typedef struct active_app_node {
-	struct list_head list;        
-	u_int32_t app_id;             
-	unsigned char mac[MAC_ADDR_LEN];  
-	u_int32_t src_ip;             
-	u_int32_t dst_ip;             
-	struct in6_addr src_ip6;       
-	struct in6_addr dst_ip6;       
-	u_int16_t src_port;           
-	u_int16_t dst_port;           
-	u_int8_t l4_protocol;          
-	u_int8_t drop;                 
-	u_int8_t proto_type;           
-	char host[32];                 
-	char uri[32];                  
-	u_int32_t update_time;         
+	struct list_head list;
+	u_int32_t app_id;
+	unsigned char mac[MAC_ADDR_LEN];
+	u_int32_t src_ip;
+	u_int32_t dst_ip;
+	struct in6_addr src_ip6;
+	struct in6_addr dst_ip6;
+	u_int16_t src_port;
+	u_int16_t dst_port;
+	u_int8_t l4_protocol;
+	u_int8_t drop;
+	u_int8_t proto_type;
+	char host[32];
+	char uri[32];
+	u_int32_t update_time;
 } active_app_node_t;
 
 
 typedef struct active_host_node {
-	struct list_head list;        
-	char host[64];                 
-	unsigned char mac[MAC_ADDR_LEN];  
-	u_int32_t src_ip;             
-	u_int32_t dst_ip;             
-	struct in6_addr src_ip6;       
-	struct in6_addr dst_ip6;       
-	u_int16_t src_port;           
-	u_int16_t dst_port;           
-	u_int8_t l4_protocol;          
-	u_int8_t drop;                 
-	u_int8_t proto_type;           
-	u_int32_t update_time;         
+	struct list_head list;
+	char host[64];
+	unsigned char mac[MAC_ADDR_LEN];
+	u_int32_t src_ip;
+	u_int32_t dst_ip;
+	struct in6_addr src_ip6;
+	struct in6_addr dst_ip6;
+	u_int16_t src_port;
+	u_int16_t dst_port;
+	u_int8_t l4_protocol;
+	u_int8_t drop;
+	u_int8_t proto_type;
+	u_int32_t update_time;
 } active_host_node_t;
 
 int regexp_match(char *reg, char *text);

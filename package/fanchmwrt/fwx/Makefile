@@ -11,13 +11,13 @@ RSTRIP:=:
 define KernelPackage/fwx
   SUBMENU:=Netfilter Extensions
   TITLE:=fwx netfilter module
-  FILES:=$(PKG_BUILD_DIR)/fwx.ko 
+  FILES:=$(PKG_BUILD_DIR)/fwx.ko
   DEPENDS:=+kmod-ipt-conntrack
   KCONFIG:=
 endef
 
 define KernelPackage/fwx/description
-  fwx netfilter module 
+  fwx netfilter module
 endef
 
 
@@ -37,4 +37,3 @@ define Build/Compile
 endef
 
 $(eval $(call KernelPackage,fwx))
-

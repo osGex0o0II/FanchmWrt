@@ -1,4 +1,5 @@
 * -text
+package/fanchmwrt/** text=auto eol=lf
 *.patch whitespace=-indent-with-non-tab,-space-before-tab,-tab-in-indent,-trailing-space
 *.dts text eol=lf
 *.dts[io] text eol=lf

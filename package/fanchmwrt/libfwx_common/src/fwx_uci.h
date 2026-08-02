@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #ifndef __FWX_UCI_H__
 #define __FWX_UCI_H__
@@ -24,4 +24,3 @@ int fwx_uci_add_section(struct uci_context * ctx, char *package_name, char *sect
 int fwx_uci_commit(struct uci_context *ctx, const char * package);
 int fwx_uci_delete(struct uci_context *ctx, char *key);
 #endif
-

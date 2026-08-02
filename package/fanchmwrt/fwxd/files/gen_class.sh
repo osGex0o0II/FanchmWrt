@@ -7,4 +7,3 @@ test -f $CLASS_NAME_FILE &&{
 	rm $CLASS_NAME_FILE
 }
 cat $f_file  |grep "#class" | awk '{print $3 " " $2 " " $4}' >$CLASS_NAME_FILE
-

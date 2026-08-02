@@ -13,11 +13,11 @@ check_device() {
 
 send_json() {
 	local json_str="$1"
-	
+
 	if ! check_device; then
 		return 1
 	fi
-	
+
 	echo "$json_str" > "$DEV_FILE" 2>/dev/null
 	if [ $? -ne 0 ]; then
 		echo "Error: Failed to write to $DEV_FILE" >&2
@@ -29,7 +29,7 @@ send_json() {
 
 dump_appfilter() {
 	local json='{"api":"dump_app_filter_rule","data":{}}'
-	
+
 	echo "Dumping AppFilter rules..."
 	if send_json "$json"; then
 		echo "AppFilter dump command sent successfully"
@@ -42,7 +42,7 @@ dump_appfilter() {
 
 dump_macfilter() {
 	local json='{"api":"dump_mac_filter_rule","data":{}}'
-	
+
 	echo "Dumping MACFilter rules..."
 	if send_json "$json"; then
 		echo "MACFilter dump command sent successfully"
@@ -90,4 +90,3 @@ main() {
 }
 
 main "$@"
-

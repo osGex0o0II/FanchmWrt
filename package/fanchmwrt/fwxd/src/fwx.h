@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #ifndef __FWX_H___
 #define __FWX_H___
@@ -20,7 +20,7 @@
 
 
 typedef struct fwx_status {
-    
+
     int internet;
 } fwx_status_t;
 
@@ -35,7 +35,7 @@ extern fwx_capability_t g_fwx_capability;
 typedef enum {
 	LOG_LEVEL_ERROR,
 	LOG_LEVEL_WARN,
-   	LOG_LEVEL_INFO,
+	LOG_LEVEL_INFO,
     LOG_LEVEL_DEBUG
 } LogLevel;
 
@@ -43,9 +43,9 @@ extern int current_log_level;
 extern int g_fwxd_debug_mode;
 
 static void af_log(LogLevel level, const char *func, int line, const char *format, ...){
-    if (level > current_log_level) 
+    if (level > current_log_level)
         return;
-    
+
     FILE *log_file = fopen(LOG_FILE_PATH, "a");
     if (!log_file) {
         perror("Failed to open log file");
@@ -98,7 +98,7 @@ typedef struct time_config{
 typedef struct weekday_time_config{
 	af_time_t start_time;
 	af_time_t end_time;
-    unsigned char weekday_map[7]; 
+    unsigned char weekday_map[7];
 }weekday_time_config_t;
 
 typedef struct fwx_time_config_t{

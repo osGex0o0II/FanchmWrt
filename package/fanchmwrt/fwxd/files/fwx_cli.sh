@@ -6,7 +6,7 @@ show_progress()
 	current_progress=0
 	min_increment=5
 	max_increment=20
-	
+
 	while [ $current_progress -lt 100 ]; do
 		random_value=$((RANDOM % (max_increment - min_increment + 1) + min_increment))
 		if [ $count -eq 0 ];then
@@ -28,7 +28,7 @@ show_progress()
 		if [ $count -ge $total_time ];then
 			break
 		fi
-		count=`expr $count + 1`	
+		count=`expr $count + 1`
 		sleep 1
 	done
 	echo
@@ -52,12 +52,12 @@ get_cpu_usage() {
     echo "$cpu_usage"
 }
 
-refresh_system_info() {                                                                                  
-    mem_total_kb=$(free | grep Mem | awk '{print $2}')                   
-    mem_used_kb=$(free | grep Mem | awk '{print $3}') 
-    mem_total=$(expr $mem_total_kb / 1024)                   
-    mem_used=$(expr $mem_used_kb / 1024)                     
-    mem_usage=$(expr $mem_used \* 100 / $mem_total)                             
+refresh_system_info() {
+    mem_total_kb=$(free | grep Mem | awk '{print $2}')
+    mem_used_kb=$(free | grep Mem | awk '{print $3}')
+    mem_total=$(expr $mem_total_kb / 1024)
+    mem_used=$(expr $mem_used_kb / 1024)
+    mem_usage=$(expr $mem_used \* 100 / $mem_total)
     hostname=$(cat /proc/sys/kernel/hostname)
     conn_num=$(cat /proc/sys/net/netfilter/nf_conntrack_count)
     client_num=$(cat /proc/net/af_client 2>/dev/null | wc -l)
@@ -65,7 +65,7 @@ refresh_system_info() {
      client_num=`expr $client_num - 1`
     fi
     cpu_usage=$(get_cpu_usage)
-    
+
     # Get work mode from UCI config
     work_mode=$(uci get fwx.network.work_mode 2>/dev/null)
     if [ -z "$work_mode" ]; then
@@ -78,17 +78,17 @@ refresh_system_info() {
     else
         work_mode_str="Unknown Mode"
     fi
-                                
-    #ip_address=$(ip -o -4 addr show | awk '{print $2 ": " $4}' | tr '\n' ' ') 
-    ip_address=$(ip -o -4 addr show | awk '{print $2 ": " $4}') 
-    
-    clear                                                                    
-    echo -e "Hostname: \033[1;32m${hostname}\033[0m"                                                                     
-    echo -e "Cpu Usage: \033[1;32m${cpu_usage}%\033[0m"                                                                     
-    echo -e "Memory Usage: \033[1;32m${mem_used}MB/${mem_total}MB (${mem_usage}%)\033[0m"        
-    echo -e "Network Sessions: \033[1;32m${conn_num}\033[0m"                                                                     
-    echo -e "Client Num: \033[1;32m${client_num}\033[0m"     
-    echo -e "Work Mode: \033[1;32m${work_mode_str}\033[0m"                                                  
+
+    #ip_address=$(ip -o -4 addr show | awk '{print $2 ": " $4}' | tr '\n' ' ')
+    ip_address=$(ip -o -4 addr show | awk '{print $2 ": " $4}')
+
+    clear
+    echo -e "Hostname: \033[1;32m${hostname}\033[0m"
+    echo -e "Cpu Usage: \033[1;32m${cpu_usage}%\033[0m"
+    echo -e "Memory Usage: \033[1;32m${mem_used}MB/${mem_total}MB (${mem_usage}%)\033[0m"
+    echo -e "Network Sessions: \033[1;32m${conn_num}\033[0m"
+    echo -e "Client Num: \033[1;32m${client_num}\033[0m"
+    echo -e "Work Mode: \033[1;32m${work_mode_str}\033[0m"
     echo -e "IP Addresses:"
     prefix=""
     local count=`echo "$ip_address" | wc -l`
@@ -98,11 +98,11 @@ refresh_system_info() {
          # Parse interface name and IP/CIDR
          iface=$(echo "$line" | awk -F': ' '{print $1}')
          ip_cidr=$(echo "$line" | awk -F': ' '{print $2}')
-         
+
          # Extract IP and CIDR
          ip=$(echo "$ip_cidr" | cut -d'/' -f1)
          cidr=$(echo "$ip_cidr" | cut -d'/' -f2)
-         
+
          # Convert CIDR to netmask
          if [ -n "$cidr" ]; then
              netmask=$(cidr_to_netmask $cidr)
@@ -110,15 +110,15 @@ refresh_system_info() {
          else
              display_line="${iface}: ${ip_cidr}"
          fi
-         
+
          if [ $loop -eq $count ];then
              echo -e "    └── ${display_line}"
          else
              echo -e "    ├── ${display_line}"
          fi
     done
-    echo                                                                     
-}  
+    echo
+}
 
 usage() {
     echo "--------------------Quick Start-------------------"
@@ -141,10 +141,10 @@ show_disks() {
         model=$(cat /sys/block/$base_name/device/model 2>/dev/null | tr -d ' ')
         vendor_model="${vendor}, ${model}"
         size=$(fdisk -l $disk 2>/dev/null | grep "Disk $disk" | awk '{print $3, $4}' | tr -d ',')
-        
+
         echo "Device: $disk (${vendor_model:-Unknown})"
         echo "├── Size: ${size:-Unknown}"
-        
+
         fdisk -l $disk 2>/dev/null | awk -v prefix="    " '
         /^\/dev/ {
             dev=$1; start=$2; end=$3; sectors=$4; size=$5; type=$6;
@@ -182,12 +182,12 @@ cidr_to_netmask() {
         echo "255.255.255.0"
         return
     fi
-    
+
     if [ "$cidr" -lt 0 ] || [ "$cidr" -gt 32 ]; then
         echo "255.255.255.0"
         return
     fi
-    
+
     # Calculate netmask using bitwise operations
     mask=$((0xffffffff << (32 - $cidr) & 0xffffffff))
     o1=$((($mask >> 24) & 0xff))
@@ -203,7 +203,7 @@ check_and_init_network() {
     if [ "$init_flag" = "1" ]; then
         return 0
     fi
-    
+
     # Wait for br-lan interface to be up (max 30 seconds)
     wait_time=0
     max_wait=30
@@ -214,13 +214,13 @@ check_and_init_network() {
         sleep 1
         wait_time=$(expr $wait_time + 1)
     done
-    
+
     # Check if br-lan interface is up after waiting
     if ! ifconfig br-lan >/dev/null 2>&1; then
         echo "br-lan interface is not up after waiting ${max_wait} seconds, network may not be initialized yet."
         return 0
     fi
-    
+
     # Check WAN configuration
     wan_proto=$(uci get network.wan.proto 2>/dev/null)
     if [ -z "$wan_proto" ]; then
@@ -235,7 +235,7 @@ check_and_init_network() {
         uci set fwx.global.cli_init=1
         uci commit fwx
     fi
-    
+
     return 0
 }
 
@@ -250,36 +250,36 @@ monitor_clients() {
         echo "=========================================="
         echo ""
         read -p "Enter page number (1-100, default: 1, 'q' to return menu): " input_page
-        
+
         if [ "$input_page" = "q" ] || [ "$input_page" = "Q" ]; then
             return
         fi
-        
+
         if [ -z "$input_page" ]; then
             page=1
         else
             page=$input_page
         fi
-        
+
         if ! echo "$page" | grep -E '^[0-9]+$' >/dev/null 2>&1; then
             echo "Error: Invalid page number, please enter a number between 1-100"
             sleep 2
             continue
         fi
-        
+
         if [ "$page" -lt 1 ] || [ "$page" -gt 100 ]; then
             echo "Error: Page number must be between 1-100"
             sleep 2
             continue
         fi
-        
+
         while true; do
             clear
             echo "=========================================="
             echo "  Online Client Monitor - Page $page"
             echo "=========================================="
             echo ""
-            
+
             json_data=$(ubus call fwx common "{\"api\":\"get_all_users\",\"data\":{\"flag\":3,\"page\":$page,\"page_size\":20}}" 2>/dev/null)
             if [ $? -ne 0 ] || [ -z "$json_data" ]; then
                 echo "Failed to get client data"
@@ -295,17 +295,17 @@ monitor_clients() {
                     break
                 fi
             fi
-            
+
             printf "%-18s %-16s %-12s %-12s %-40s\n" "MAC Address" "IP Address" "Up Rate" "Down Rate" "Current URL"
             echo "--------------------------------------------------------------------------------"
-            
+
             online_count=0
             if command -v jsonfilter >/dev/null 2>&1; then
                 list_length=$(echo "$json_data" | jsonfilter -e '@.data.total_num' 2>/dev/null)
                 if [ -z "$list_length" ]; then
                     list_length=0
                 fi
-                
+
                 i=0
                 while [ $i -lt $list_length ] && [ $online_count -lt 20 ]; do
                     online=$(echo "$json_data" | jsonfilter -e "@.data.list[$i].online" 2>/dev/null)
@@ -315,22 +315,22 @@ monitor_clients() {
                         up_rate=$(echo "$json_data" | jsonfilter -e "@.data.list[$i].up_rate" 2>/dev/null)
                         down_rate=$(echo "$json_data" | jsonfilter -e "@.data.list[$i].down_rate" 2>/dev/null)
                         url=$(echo "$json_data" | jsonfilter -e "@.data.list[$i].url" 2>/dev/null)
-              
+
                         if [ -n "$mac" ]; then
                             up_rate_str=$(format_rate ${up_rate:-0})
                             down_rate_str=$(format_rate ${down_rate:-0})
-                            
+
                             # Handle empty or null URL
                             if [ -z "$url" ] || [ "$url" = "null" ] || [ "$url" = "::" ]; then
                                 url="--"
                             fi
-                            
+
                             # Truncate long URLs
                             url_len=${#url}
                             if [ $url_len -gt 40 ]; then
                                 url=$(echo "$url" | cut -c1-37)"..."
                             fi
-                            
+
                             printf "%-18s %-16s %-12s %-12s %-40s\n" "$mac" "${ip:---}" "$up_rate_str" "$down_rate_str" "$url"
                             online_count=$(expr $online_count + 1)
                         fi
@@ -338,7 +338,7 @@ monitor_clients() {
                     i=$(expr $i + 1)
                 done
             fi
-            
+
             if [ $online_count -eq 0 ]; then
                 echo "No online clients found on page $page"
                 echo ""
@@ -346,10 +346,10 @@ monitor_clients() {
                 read -n 1 key 2>/dev/null
                 break
             fi
-            
+
             total_num=$(echo "$json_data" | jsonfilter -e '@.data.total_num' 2>/dev/null)
             total_page=$(echo "$json_data" | jsonfilter -e '@.data.total_page' 2>/dev/null)
-            
+
             echo ""
             if [ -n "$total_num" ] && [ -n "$total_page" ]; then
                 echo "Page $page of $total_page (Total: $total_num online clients)"
@@ -367,7 +367,7 @@ monitor_clients() {
             fi
             echo "  [q] Return to menu"
             echo ""
-            
+
             if [ $auto_refresh -eq 1 ]; then
                 read -t $refresh_interval -p ">> " choice 2>/dev/null
                 if [ $? -ne 0 ]; then
@@ -377,13 +377,13 @@ monitor_clients() {
             else
                 read -p ">> " choice
             fi
-            
+
             # If no input and auto refresh is on, refresh
             if [ -z "$choice" ] && [ $auto_refresh -eq 1 ]; then
                 clear
                 continue
             fi
-            
+
             case "$choice" in
                 n|N)
                     if [ -n "$total_page" ] && [ "$page" -lt "$total_page" ]; then
@@ -478,13 +478,13 @@ lan_static_ip_handle()
        echo "error,invalid ip addr"
        return 1;
     fi
-   
+
     read -p "Input Netmask(default:255.255.255.0)>>" netmask
     validate_ip $netmask
     if [ $? -ne 0 ];then
         netmask="255.255.255.0"
     fi
-    uci set network.lan.ipaddr=$ipaddr 
+    uci set network.lan.ipaddr=$ipaddr
     uci set network.lan.netmask=$netmask
     uci set network.lan.proto=static
     uci commit network
@@ -519,17 +519,17 @@ while true; do
         # Timeout, auto refresh
         choice=""
     fi
-    
+
     # If no input, auto refresh
     if [ -z "$choice" ]; then
         continue
     fi
-    
+
     case "$choice" in
         1)
             clear
             echo "Change LAN IP Proto to DHCP"
-   	    read -p "Change the LAN port IP to DHCP? (y/n)" choice
+	    read -p "Change the LAN port IP to DHCP? (y/n)" choice
 	    if [ x"$choice" == x"y" -o x"$choice" == x"Y" ];then
              echo "begin reload network,waitting..."
 	    uci set network.lan.proto=dhcp
@@ -545,20 +545,20 @@ while true; do
         2)
             clear
             echo "Set LAN IP"
-            lan_static_ip_handle 
+            lan_static_ip_handle
 	    show_progress 3
-    	    echo "set lan ip ok, ip = $ipaddr, mask = $netmask"
+	    echo "set lan ip ok, ip = $ipaddr, mask = $netmask"
             sleep 1
             ;;
         3)
             clear
             ifconfig
-    	    read -p "Press any key to continue " choice
+	    read -p "Press any key to continue " choice
             ;;
         4)
             clear
             ps
-    	    read -p "Press any key to continue " choice
+	    read -p "Press any key to continue " choice
             ;;
         5)
             monitor_clients
@@ -570,4 +570,3 @@ while true; do
             ;;
     esac
 done
-

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-/* 
- * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>  
+/*
+ * Copyright(c) 2026 destan19(TT) <www.fanchmwrt.com>
 */
 #include <unistd.h>
 #include <stdlib.h>
@@ -38,7 +38,7 @@ extern void check_and_cleanup_history_data_by_size(void);
 extern void collect_interface_traffic_rate(void);
 
 fwx_status_t g_fwx_status = {
-    .internet = 1  
+    .internet = 1
 };
 
 fwx_capability_t g_fwx_capability = {
@@ -62,7 +62,7 @@ int fwx_nl_clean_feature(void){
         return -1;
     }
     msg.action = FWX_NL_MSG_CLEAN_FEATURE;
-  
+
     fwx_nl_send_msg_to_kernel(fwx_nl_fd.fd,(void *)&msg, sizeof(msg));
     return 0;
 }
@@ -114,7 +114,7 @@ int fwx_load_feature_to_kernel(void){
 			continue;
 		if (strstr(line_buf, "#"))
 			continue;
-		
+
 		if (strlen(line_buf) >= MAX_FEATURE_LINE_LEN - 1){
             LOG_ERROR("feature line too long: %s\n", line_buf);
 			continue;
@@ -158,7 +158,7 @@ void update_lan_ip(void){
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx)
         return;
-	
+
     int ret = fwx_uci_get_value(ctx, "appfilter.global.lan_ifname", lan_ifname, sizeof(lan_ifname) - 1);
     if (ret != 0){
         strcpy(lan_ifname, "br-lan");
@@ -197,16 +197,16 @@ void daily_archive_handle(void){
         static int last_mday = -1;
         int current_mday = tm_info->tm_mday;
         LOG_INFO("current_mday: %d, last_mday: %d\n", current_mday, last_mday);
-        
+
         if (last_mday != -1 && last_mday != current_mday) {
             LOG_INFO("date changed, need to archive\n");
-            
+
             check_and_archive_all_clients();
         }
         else{
             LOG_INFO("date not changed, no need to archive\n");
         }
-        
+
         last_mday = current_mday;
     }
 }
@@ -237,8 +237,8 @@ void fwx_timeout_handler(struct uloop_timeout *t)
         LOG_INFO("begin save all client to files\n");
         save_all_client_backup_to_files();
     }
-    
-    if (count % 2 == 0) {  
+
+    if (count % 2 == 0) {
         collect_interface_traffic_rate();
     }
 
@@ -291,7 +291,7 @@ void fwx_handle_sigusr1(int sig) {
 void fwx_handle_sigusr2(int sig) {
     LOG_INFO("Received SIGUSR2 signal\n");
 	if (current_log_level < LOG_LEVEL_DEBUG)
-   		current_log_level++;
+		current_log_level++;
 	else
 		current_log_level = LOG_LEVEL_WARN;
 
@@ -332,7 +332,7 @@ int main(int argc, char **argv)
     LOG_WARN("fwxd debug mode: %d\n", g_fwxd_debug_mode);
     g_feature_update = 1;
     uloop_init();
-    signal(SIGUSR1, fwx_handle_sigusr1);	
+    signal(SIGUSR1, fwx_handle_sigusr1);
     signal(SIGUSR2, fwx_handle_sigusr2);
     signal(SIGCHLD, SIG_IGN);
     init_client_list();
@@ -346,7 +346,7 @@ int main(int argc, char **argv)
     {
         LOG_ERROR("Failed to connect to ubus\n");
         return 1;
-    }  
+    }
 
     if (start_check_thread() < 0) {
         LOG_ERROR("Failed to start check_thread\n");
