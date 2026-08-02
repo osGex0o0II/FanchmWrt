@@ -1,0 +1,44 @@
+name: 设备支持请求
+description: 请求评估新的设备、板级配置或升级路径
+title: "[Device]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请确认设备、分区布局和恢复方式。请求不代表项目已承诺支持该设备。
+  - type: input
+    id: device
+    attributes:
+      label: 设备型号与板级标识
+      description: 请提供准确型号、SoC、目标平台和可用的 board 名称。
+    validations:
+      required: true
+  - type: textarea
+    id: storage
+    attributes:
+      label: 闪存与分区布局
+      description: 请提供容量、分区表、引导加载器限制和已知升级路径。
+    validations:
+      required: true
+  - type: textarea
+    id: upstream
+    attributes:
+      label: 上游支持与参考资料
+      description: 请说明 OpenWrt 上游状态、DTS 或公开的硬件资料。
+    validations:
+      required: true
+  - type: textarea
+    id: test_plan
+    attributes:
+      label: 构建和恢复计划
+      description: 请说明如何构建、验证及在失败时恢复；不要建议强制刷写。
+    validations:
+      required: true
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 提交确认
+      options:
+        - label: 我已删除敏感信息，并理解该请求不是支持承诺。
+          required: true

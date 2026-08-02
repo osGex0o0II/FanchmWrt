@@ -1,8 +1,21 @@
-Thanks for your contribution to OpenWrt!
+## 目的
 
-To help keep the codebase consistent and readable,
-and to help people review your contribution,
-we ask you to follow the rules you find in the wiki at this link
-https://openwrt.org/submitting-patches
+<!-- 这项改动解决什么问题，为什么现在需要它？ -->
 
-Please remove this message before posting the pull request.
+## 范围
+
+<!-- 列出改动的文件、软件包、设备或文档；说明明确未涉及的内容。 -->
+
+## 测试
+
+<!-- 列出实际执行的命令、环境和结果。若无法执行，请说明原因与风险。 -->
+
+## 兼容性与风险
+
+<!-- 说明对目标、设备 Profile、分区布局、内核、feeds 或已有配置的影响。 -->
+
+## 提交确认
+
+- [ ] 改动保持聚焦，未包含无关格式化或二进制文件。
+- [ ] 我已提供相应的测试或静态检查证据。
+- [ ] 我未提交凭据、私有配置或敏感漏洞利用细节。
