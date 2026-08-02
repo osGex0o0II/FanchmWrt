@@ -34,6 +34,12 @@ if grep -F -- '--allow-untrusted' "$package_manager_call" >/dev/null; then
   exit 1
 fi
 
+if grep -F '$ipkg_bin list --full' "$package_manager_call" >/dev/null || \
+   ! grep -F '$ipkg_bin query --fields all --format json --available \* 2>/dev/null' "$package_manager_call" >/dev/null; then
+  echo 'FAIL: LuCI package manager does not return APK available packages as JSON' >&2
+  exit 1
+fi
+
 awk '
   /^fwx_init:/ { in_fwx_init = 1; next }
   in_fwx_init && /^[^[:space:]#][^:]*:/ { in_fwx_init = 0 }
