@@ -166,6 +166,7 @@ define Device/zn_m2
 	$(call Device/UbiFit)
 	DEVICE_VENDOR := Zhaoneng
 	DEVICE_MODEL := ZN-M2
+	DEVICE_DTS := ipq6000-zn-m2
 	BLOCKSIZE := 128k
 	PAGESIZE := 2048
 	SOC := ipq6000
