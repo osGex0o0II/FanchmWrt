@@ -161,6 +161,20 @@ define Device/qihoo_360v6
 endef
 TARGET_DEVICES += qihoo_360v6
 
+define Device/zn_m2
+	$(call Device/FitImage)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := Zhaoneng
+	DEVICE_MODEL := ZN-M2
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	SOC := ipq6000
+	DEVICE_DTS_CONFIG := config@cp03-c1
+	# nowifi: 不启用无线，也不需要 ath11k 驱动/board file
+	DEVICE_PACKAGES := -ipq-wifi-qihoo_360v6 -ath11k-firmware-ipq6018 -kmod-ath11k-ahb -wpad-basic-mbedtls
+endef
+TARGET_DEVICES += zn_m2
+
 define Device/tplink_eap610-outdoor
 	$(call Device/FitImage)
 	$(call Device/UbiFit)

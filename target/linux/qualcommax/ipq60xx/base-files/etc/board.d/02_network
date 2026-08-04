@@ -33,6 +33,9 @@ ipq60xx_setup_interfaces()
 	qihoo,360v6)
 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" "wan"
 		;;
+	zn,m2)
+		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" "wan"
+		;;
 	netgear,wax610|\
 	netgear,wax610y|\
 	tplink,eap610-outdoor|\
