@@ -86,6 +86,11 @@ define Device/bell_xg-040g-md
   IMAGES := factory.bin sysupgrade.bin
   IMAGE/factory.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-  DEVICE_PACKAGES := airoha-en7581-npu-firmware kmod-phy-airoha-en8811h kmod-i2c-an7581 kmod-leds-gpio kmod-gpio-button-hotplug uboot-envtools ubi-utils kmod-usb-storage-uas kmod-usb-net-cdc-ether kmod-fs-vfat kmod-fs-exfat kmod-fs-ext4 kmod-fs-ntfs3 blkid lsblk
+  DEVICE_PACKAGES := airoha-en7581-npu-firmware kmod-phy-airoha-en8811h kmod-i2c-an7581 kmod-leds-gpio kmod-gpio-button-hotplug uboot-envtools ubi-utils kmod-usb-storage-uas kmod-usb-net-cdc-ether kmod-fs-vfat kmod-fs-exfat kmod-fs-ext4 kmod-fs-ntfs3 blkid lsblk \
+  	fwxd kmod-fwx libfwx_common luci luci-theme-fanchmwrt \
+  	luci-app-fwx-appfilter luci-app-fwx-dashboard luci-app-fwx-feature \
+  	luci-app-fwx-macfilter luci-app-fwx-network luci-app-fwx-record \
+  	luci-app-fwx-resources luci-app-fwx-user luci-app-fwx-dashboard-setting \
+  	luci-app-fwx-session-stat luci-app-fwx-user-record luci-app-fwx-system
 endef
 TARGET_DEVICES += bell_xg-040g-md
