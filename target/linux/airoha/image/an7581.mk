@@ -83,6 +83,7 @@ define Device/bell_xg-040g-md
   IMAGE_SIZE := 261120k
   KERNEL_IN_UBI := 1
   UBINIZE_OPTS := -s 2048
+  SUPPORTED_DEVICES += bell,xg-040g-md
   IMAGES := factory.bin sysupgrade.bin
   IMAGE/factory.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata

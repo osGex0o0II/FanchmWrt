@@ -171,6 +171,7 @@ define Device/zn_m2
 	PAGESIZE := 2048
 	SOC := ipq6000
 	DEVICE_DTS_CONFIG := config@cp03-c1
+	SUPPORTED_DEVICES += zn,m2
 	# nowifi: 不启用无线，也不需要 ath11k 驱动/board file
 	DEVICE_PACKAGES := -ipq-wifi-qihoo_360v6 -ath11k-firmware-ipq6018 -kmod-ath11k-ahb -wpad-basic-mbedtls \
 		fwxd kmod-fwx libfwx_common luci luci-theme-fanchmwrt \
