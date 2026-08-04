@@ -96,7 +96,8 @@ end
 
 local function is_time_in_range(time_rules, current_info)
     if not time_rules or #time_rules == 0 then
-        return false
+        -- 无时间限制：全天生效
+        return true
     end
 
     for _, time_rule in ipairs(time_rules) do
@@ -109,7 +110,8 @@ local function is_time_in_range(time_rules, current_info)
                 end
             end
 
-            if weekday_match then
+            -- 未指定 weekday：每天均适用该时间段
+            if weekday_match or #time_rule.weekdays == 0 then
                 local start_minutes = parse_time(time_rule.start_time)
                 local end_minutes = parse_time(time_rule.end_time)
 
@@ -119,8 +121,20 @@ local function is_time_in_range(time_rules, current_info)
                             return true
                         end
                     else
-                        if current_info.minutes >= start_minutes or current_info.minutes <= end_minutes then
-                            return true
+                        -- 跨午夜时间段（如 23:00-02:00）
+                        if current_info.minutes >= start_minutes then
+                            -- 晚间段：当天 weekday 命中
+                            if weekday_match then
+                                return true
+                            end
+                        else
+                            -- 凌晨段：由前一天 weekday 的规则顺延而来
+                            local prev_wd = (current_info.weekday - 1) % 7
+                            for _, wd in ipairs(time_rule.weekdays) do
+                                if wd == prev_wd then
+                                    return true
+                                end
+                            end
                         end
                     end
                 end
@@ -855,6 +869,10 @@ local function parse_app_rule_category_stats(app_ids)
         if cur > finish then
             cur, finish = finish, cur
         end
+        -- 限制区间上界，防止超长区间（如 1-1e20）造成无界循环 DoS
+        if finish > 200000 then
+            finish = 200000
+        end
 
         local total = 0
         while cur <= finish do
@@ -1383,10 +1401,10 @@ local function process_macfilter_rules(current_info)
     if need_user_stat then
         user_active_map, user_flow_bytes_map, user_mac_list = get_macfilter_user_stat()
         if not user_active_map or not user_flow_bytes_map or not user_mac_list then
-            log("MACFilter: failed to get user stat, all-user/duration/flow evaluation will be skipped this round")
-            user_active_map = nil
-            user_flow_bytes_map = nil
-            user_mac_list = nil
+            -- fail-closed：用户统计不可用时不重建/清空内核规则，
+            -- 保留上轮已下发的拦截状态，避免父控被静默绕过
+            log("MACFilter: failed to get user stat, keeping previous kernel state this round (fail-closed)")
+            return
         else
             log(string.format("MACFilter: got user stat, total users=%d", #user_mac_list))
         end
@@ -1720,13 +1738,21 @@ local function check_state_file(file_path)
 end
 
 local function reset_state_file(file_path)
-    local file = io.open(file_path, "w")
-    if file then
-        file:write("0")
-        file:close()
-        return true
+    -- 写临时文件后原子 rename，避免跟随 /tmp 中可能被预置的符号链接
+    local tmp_file = file_path .. ".tmp"
+    local file = io.open(tmp_file, "w")
+    if not file then
+        return false
     end
-    return false
+    file:write("0")
+    file:close()
+
+    local ok = os.rename(tmp_file, file_path)
+    if not ok then
+        os.remove(tmp_file)
+        return false
+    end
+    return true
 end
 
 local function check_reinit_flags()
@@ -2046,22 +2072,28 @@ local function main_loop()
         if appfilter_whitelist_reinit then
             log("=== AppFilter whitelist state file detected change, reloading ===")
             local appfilter_whitelist = load_appfilter_whitelist()
-            apply_appfilter_whitelist(appfilter_whitelist)
-            if reset_state_file(APPFILTER_WHITELIST_STATE_FILE) then
-                log("AppFilter whitelist state file reset to 0")
+            if apply_appfilter_whitelist(appfilter_whitelist) then
+                if reset_state_file(APPFILTER_WHITELIST_STATE_FILE) then
+                    log("AppFilter whitelist state file reset to 0")
+                else
+                    log("Failed to reset AppFilter whitelist state file")
+                end
             else
-                log("Failed to reset AppFilter whitelist state file")
+                log("AppFilter whitelist apply failed, will retry on next round")
             end
         end
 
         if macfilter_whitelist_reinit then
             log("=== MACFilter whitelist state file detected change, reloading ===")
             local macfilter_whitelist = load_macfilter_whitelist()
-            apply_macfilter_whitelist(macfilter_whitelist)
-            if reset_state_file(MACFILTER_WHITELIST_STATE_FILE) then
-                log("MACFilter whitelist state file reset to 0")
+            if apply_macfilter_whitelist(macfilter_whitelist) then
+                if reset_state_file(MACFILTER_WHITELIST_STATE_FILE) then
+                    log("MACFilter whitelist state file reset to 0")
+                else
+                    log("Failed to reset MACFilter whitelist state file")
+                end
             else
-                log("Failed to reset MACFilter whitelist state file")
+                log("MACFilter whitelist apply failed, will retry on next round")
             end
         end
 

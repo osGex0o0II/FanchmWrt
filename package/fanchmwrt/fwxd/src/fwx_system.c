@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <libubox/uloop.h>
 #include <libubox/utils.h>
 #include <libubus.h>
@@ -82,6 +83,17 @@ struct json_object *fwx_api_set_system_info(struct json_object *req_obj) {
     if (strlen(lan_ifname) < 2 || strlen(lan_ifname) > 16) {
         LOG_ERROR("lan_ifname length invalid\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
+    }
+
+    /* lan_ifname 仅允许网络接口名字符，防止经 shell/uci 注入 */
+    {
+        const char *p;
+        for (p = lan_ifname; *p; p++) {
+            if (!(isalnum((unsigned char)*p) || *p == '_' || *p == '-' || *p == '.')) {
+                LOG_ERROR("lan_ifname contains invalid characters\n");
+                return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
+            }
+        }
     }
 
     struct json_object *theme_mode_obj = json_object_object_get(fwx_obj, "theme_mode");

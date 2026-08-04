@@ -145,6 +145,11 @@ define Device/Default
   IMAGES := $$(IMAGES-y)
   ARTIFACTS := $$(ARTIFACTS-y)
   SUPPORTED_DEVICES :=
+  DEVICE_PACKAGES := fwxd kmod-fwx libfwx_common luci luci-theme-fanchmwrt \
+  	luci-app-fwx-appfilter luci-app-fwx-dashboard luci-app-fwx-feature \
+  	luci-app-fwx-macfilter luci-app-fwx-network luci-app-fwx-record \
+  	luci-app-fwx-resources luci-app-fwx-user luci-app-fwx-dashboard-setting \
+  	luci-app-fwx-session-stat luci-app-fwx-user-record luci-app-fwx-system
 endef
 
 include $(SUBTARGET).mk

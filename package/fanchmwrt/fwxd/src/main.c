@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <libubox/uloop.h>
 #include <libubox/utils.h>
 #include <libubus.h>
@@ -163,6 +164,18 @@ void update_lan_ip(void){
     if (ret != 0){
         strcpy(lan_ifname, "br-lan");
     }
+
+    /* lan_ifname 会拼入 ifconfig 命令，限制为接口名字符，防止命令注入 */
+    {
+        const char *p;
+        for (p = lan_ifname; *p; p++) {
+            if (!(isalnum((unsigned char)*p) || *p == '_' || *p == '-' || *p == '.')) {
+                strcpy(lan_ifname, "br-lan");
+                break;
+            }
+        }
+    }
+
     sprintf(ip_cmd_buf, CMD_GET_LAN_IP_FMT, lan_ifname);
     sprintf(mask_cmd_buf, CMD_GET_LAN_MASK_FMT , lan_ifname);
 

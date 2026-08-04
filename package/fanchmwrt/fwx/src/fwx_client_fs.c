@@ -778,10 +778,13 @@ static int single_client_visit_open(struct inode *inode, struct file *file)
 	if (!iter)
 		return -ENOMEM;
 
+	/* 持有引用，防止 client 在读取期间被 check_client_expire 释放 */
+	refcount_inc(&client->refcnt);
 	iter->client = client;
 
 	err = seq_open(file, &single_client_visit_seq_ops);
 	if (err) {
+		af_client_put(client);
 		kfree(iter);
 		return err;
 	}
@@ -791,13 +794,24 @@ static int single_client_visit_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
+/* 关闭 proc 文件时释放 client 引用 */
+static int single_client_visit_release(struct inode *inode, struct file *file)
+{
+	struct seq_file *seq = file->private_data;
+	struct single_client_visit_iter_state *iter = seq ? seq->private : NULL;
+
+	if (iter && iter->client)
+		af_client_put(iter->client);
+	return seq_release_private(inode, file);
+}
+
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5, 5, 0)
 static const struct file_operations single_client_visit_fops = {
 	.owner = THIS_MODULE,
 	.open = single_client_visit_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
-	.release = seq_release_private,
+	.release = single_client_visit_release,
 };
 #else
 static const struct proc_ops single_client_visit_fops = {
@@ -805,7 +819,7 @@ static const struct proc_ops single_client_visit_fops = {
 	.proc_read = seq_read,
 	.proc_open = single_client_visit_open,
 	.proc_lseek = seq_lseek,
-	.proc_release = seq_release_private,
+	.proc_release = single_client_visit_release,
 };
 #endif
 

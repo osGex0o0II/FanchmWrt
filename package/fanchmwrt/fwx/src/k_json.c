@@ -224,23 +224,25 @@ static char *print_string_ptr(const char *str)
 static char *print_string(cJSON *item)	{return print_string_ptr(item->valuestring);}
 
 
-static const char *parse_value(cJSON *item,const char *value);
+static const char *parse_value(cJSON *item,const char *value,int depth);
 static char *print_value(cJSON *item,int depth);
-static const char *parse_array(cJSON *item,const char *value);
+static const char *parse_array(cJSON *item,const char *value,int depth);
 static char *print_array(cJSON *item,int depth);
-static const char *parse_object(cJSON *item,const char *value);
+static const char *parse_object(cJSON *item,const char *value,int depth);
 static char *print_object(cJSON *item,int depth);
 
 
 static const char *skip(const char *in) {while (in && *in<=32) in++; return in;}
 
 
+#define CJSON_MAX_PARSE_DEPTH 64
+
 cJSON *cJSON_Parse(const char *value)
 {
 	cJSON *c=cJSON_New_Item();
 	if (!c) return 0;
 
-	if (!parse_value(c,skip(value))) {cJSON_Delete(c);return 0;}
+	if (!parse_value(c,skip(value),0)) {cJSON_Delete(c);return 0;}
 	return c;
 }
 
@@ -248,16 +250,17 @@ cJSON *cJSON_Parse(const char *value)
 char *cJSON_Print(cJSON *item)			{return print_value(item,0);}
 
 
-static const char *parse_value(cJSON *item,const char *value)
+static const char *parse_value(cJSON *item,const char *value,int depth)
 {
 	if (!value)						return 0;	// Fail on null.
+	if (depth > CJSON_MAX_PARSE_DEPTH)	return 0;	// fail on too-deep nesting.
 	if (!strncmp(value,"null",4))	{ item->type=cJSON_NULL;  return value+4; }
 	if (!strncmp(value,"false",5))	{ item->type=cJSON_False; return value+5; }
 	if (!strncmp(value,"true",4))	{ item->type=cJSON_True; item->valueint=1;	return value+4; }
 	if (*value=='\"')				{ return parse_string(item,value); }
 	if (*value=='-' || (*value>='0' && *value<='9'))	{ return parse_number(item,value); }
-	if (*value=='[')				{ return parse_array(item,value); }
-	if (*value=='{')				{ return parse_object(item,value); }
+	if (*value=='[')				{ return parse_array(item,value,depth); }
+	if (*value=='{')				{ return parse_object(item,value,depth); }
 
 	return 0;	// failure.
 }
@@ -280,7 +283,7 @@ static char *print_value(cJSON *item,int depth)
 }
 
 
-static const char *parse_array(cJSON *item,const char *value)
+static const char *parse_array(cJSON *item,const char *value,int depth)
 {
 	cJSON *child;
 	if (*value!='[')	return 0;	// not an array!
@@ -291,7 +294,7 @@ static const char *parse_array(cJSON *item,const char *value)
 
 	item->child=child=cJSON_New_Item();
 	if (!item->child) return 0;		 // memory fail
-	value=skip(parse_value(child,skip(value)));	// skip any spacing, get the value.
+	value=skip(parse_value(child,skip(value),depth+1));	// skip any spacing, get the value.
 	if (!value) return 0;
 
 	while (*value==',')
@@ -299,7 +302,7 @@ static const char *parse_array(cJSON *item,const char *value)
 		cJSON *new_item;
 		if (!(new_item=cJSON_New_Item())) return 0; 	// memory fail
 		child->next=new_item;new_item->prev=child;child=new_item;
-		value=skip(parse_value(child,skip(value+1)));
+		value=skip(parse_value(child,skip(value+1),depth+1));
 		if (!value) return 0;	// memory fail
 	}
 
@@ -332,7 +335,7 @@ static char *print_array(cJSON *item,int depth)
 }
 
 
-static const char *parse_object(cJSON *item,const char *value)
+static const char *parse_object(cJSON *item,const char *value,int depth)
 {
 	cJSON *child;
 	if (*value!='{')	return 0;	// not an object!
@@ -346,7 +349,7 @@ static const char *parse_object(cJSON *item,const char *value)
 	if (!value) return 0;
 	child->string=child->valuestring;child->valuestring=0;
 	if (*value!=':') return 0;	// fail!
-	value=skip(parse_value(child,skip(value+1)));	// skip any spacing, get the value.
+	value=skip(parse_value(child,skip(value+1),depth+1));	// skip any spacing, get the value.
 	if (!value) return 0;
 
 	while (*value==',')
@@ -358,7 +361,7 @@ static const char *parse_object(cJSON *item,const char *value)
 		if (!value) return 0;
 		child->string=child->valuestring;child->valuestring=0;
 		if (*value!=':') return 0;	// fail!
-		value=skip(parse_value(child,skip(value+1)));	// skip any spacing, get the value.
+		value=skip(parse_value(child,skip(value+1),depth+1));	// skip any spacing, get the value.
 		if (!value) return 0;
 	}
 

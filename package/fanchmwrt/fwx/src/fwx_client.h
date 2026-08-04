@@ -5,6 +5,7 @@
 #ifndef __AF_CLIENT_H__
 #define __AF_CLIENT_H__
 #include "fwx.h"
+#include <linux/refcount.h>
 struct cJSON;
 
 extern rwlock_t af_client_lock;
@@ -79,6 +80,7 @@ typedef struct visiting_info{
 typedef struct af_client_info
 {
 	struct list_head hlist;
+	refcount_t refcnt;
 	unsigned char mac[MAC_ADDR_LEN];
 	unsigned int ip;
 	struct in6_addr ipv6;
@@ -111,7 +113,7 @@ af_client_info_t *find_af_client_by_ipv6(struct in6_addr *addr);
 af_client_info_t *find_af_client(unsigned char *mac);
 
 void check_client_expire(void);
-
+void af_client_put(af_client_info_t *node);
 void af_visit_info_report(void);
 
 void af_client_list_reset_report_num(void);

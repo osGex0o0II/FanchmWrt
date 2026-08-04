@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -199,20 +200,64 @@ int fwx_parse_time_str(const char *time_str, fwx_time_period_t *periods, int max
 
 
 void update_fwx_proc_value(char *key, char *value){
-    char cmd_buf[128] = {0};
     char file_path[128] = {0};
     char old_value[128] = {0};
-    sprintf(file_path, "/proc/sys/fwx/%s", key);
+    int fd;
+    ssize_t ret;
+
+    if (!key || !value)
+        return;
+
+    snprintf(file_path, sizeof(file_path), "/proc/sys/fwx/%s", key);
 
     af_read_file_value(file_path, old_value, sizeof(old_value));
-    if (strcmp(old_value, value) != 0){
-        sprintf(cmd_buf, "echo %s >/proc/sys/fwx/%s", value, key);
-        system(cmd_buf);
-    }
+    if (strcmp(old_value, value) == 0)
+        return;
+
+    /* 直接写 procfs，避免经 shell 拼接产生命令注入 */
+    fd = open(file_path, O_WRONLY | O_CLOEXEC);
+    if (fd < 0)
+        return;
+
+    ret = write(fd, value, strlen(value));
+    close(fd);
+    (void)ret;
 }
 
 void update_fwx_proc_u32_value(char *key, u_int32_t value){
     char buf[32] = {0};
     sprintf(buf, "%u", value);
     update_fwx_proc_value(key, buf);
+}
+
+/* 校验数据目录路径：必须为绝对路径、仅含安全字符、且不含 ".." 路径段。
+ * 这些路径会被拼入 system()/popen() 命令，必须防止 shell 元字符注入。 */
+int fwx_is_safe_path(const char *p)
+{
+    const char *seg_start;
+    const char *end;
+    size_t seg_len;
+
+    if (!p || !*p || p[0] != '/')
+        return 0;
+    if (strlen(p) > 128)
+        return 0;
+    if (strchr(p, '\n') || strchr(p, '\r') || strchr(p, '\'') || strchr(p, '"') ||
+        strchr(p, ';') || strchr(p, ' ') || strchr(p, '$') || strchr(p, '`') ||
+        strchr(p, '\\') || strchr(p, '*') || strchr(p, '?') || strchr(p, '[') ||
+        strchr(p, ']') || strchr(p, '&') || strchr(p, '|') || strchr(p, '<') ||
+        strchr(p, '>') || strchr(p, '~'))
+        return 0;
+
+    seg_start = p;
+    while (seg_start && *seg_start) {
+        end = strchr(seg_start, '/');
+        if (!end)
+            end = seg_start + strlen(seg_start);
+        seg_len = (size_t)(end - seg_start);
+        if (seg_len == 2 && seg_start[0] == '.' && seg_start[1] == '.')
+            return 0;
+        seg_start = (*end) ? end + 1 : NULL;
+    }
+    return 1;
 }

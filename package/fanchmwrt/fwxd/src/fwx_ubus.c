@@ -7201,6 +7201,15 @@ struct json_object *fwx_api_set_record_base(struct json_object *req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
 
+    /* 数据目录路径会被拼入 system()/popen()（迁移、du 统计），
+     * 必须通过安全路径校验，防止命令注入 */
+    if (!fwx_is_safe_path(history_data_path) || !fwx_is_safe_path(base_data_path) ||
+        (terminal_data_path && !fwx_is_safe_path(terminal_data_path))) {
+        LOG_ERROR("set_record_base: unsafe data path\n");
+        uci_free_context(ctx);
+        return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
+    }
+
     if (strcmp(history_data_path, "/") == 0) {
         uci_free_context(ctx);
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
@@ -7274,14 +7283,18 @@ struct json_object *fwx_api_set_record_base(struct json_object *req_obj) {
             snprintf(old_backup_dir, sizeof(old_backup_dir), "%s/client_backup", old_base_path);
             snprintf(new_backup_dir, sizeof(new_backup_dir), "%s/client_backup", base_data_path);
 
-            snprintf(cmd, sizeof(cmd),
-                     "mkdir -p %s %s %s 2>/dev/null; "
-                     "mv %s/* %s/ 2>/dev/null; "
-                     "mv %s/* %s/ 2>/dev/null; true",
-                     base_data_path, new_data_dir, new_backup_dir,
-                     old_data_dir, new_data_dir,
-                     old_backup_dir, new_backup_dir);
-            system(cmd);
+            if (!fwx_is_safe_path(old_base_path) || !fwx_is_safe_path(base_data_path)) {
+                LOG_WARN("skip unsafe base data path migration\n");
+            } else {
+                snprintf(cmd, sizeof(cmd),
+                         "mkdir -p %s %s %s 2>/dev/null; "
+                         "mv %s/* %s/ 2>/dev/null; "
+                         "mv %s/* %s/ 2>/dev/null; true",
+                         base_data_path, new_data_dir, new_backup_dir,
+                         old_data_dir, new_data_dir,
+                         old_backup_dir, new_backup_dir);
+                system(cmd);
+            }
             LOG_WARN("move base data path: %s -> %s\n", old_base_path, base_data_path);
         }
 
@@ -7297,14 +7310,18 @@ struct json_object *fwx_api_set_record_base(struct json_object *req_obj) {
             snprintf(old_db_path, sizeof(old_db_path), "%s/client.db", old_history_path);
             snprintf(new_db_path, sizeof(new_db_path), "%s/client.db", history_data_path);
 
-            snprintf(cmd, sizeof(cmd),
-                     "mkdir -p %s %s 2>/dev/null; "
-                     "mv %s/* %s/ 2>/dev/null; "
-                     "mv %s %s 2>/dev/null; true",
-                     history_data_path, new_global_dir,
-                     old_global_dir, new_global_dir,
-                     old_db_path, new_db_path);
-            system(cmd);
+            if (!fwx_is_safe_path(old_history_path) || !fwx_is_safe_path(history_data_path)) {
+                LOG_WARN("skip unsafe history data path migration\n");
+            } else {
+                snprintf(cmd, sizeof(cmd),
+                         "mkdir -p %s %s 2>/dev/null; "
+                         "mv %s/* %s/ 2>/dev/null; "
+                         "mv %s %s 2>/dev/null; true",
+                         history_data_path, new_global_dir,
+                         old_global_dir, new_global_dir,
+                         old_db_path, new_db_path);
+                system(cmd);
+            }
             LOG_WARN("move history data path: %s -> %s\n", old_history_path, history_data_path);
         }
 
@@ -7433,14 +7450,19 @@ struct json_object *fwx_api_record_action(struct json_object *req_obj) {
         snprintf(history_backup_dir, sizeof(history_backup_dir), "%s/client_backup", history_root_dir);
         snprintf(history_global_dir, sizeof(history_global_dir), "%s/global", history_root_dir);
         snprintf(history_visit_db_path, sizeof(history_visit_db_path), "%s/client.db", history_root_dir);
-        snprintf(cmd, sizeof(cmd),
-                 "rm -rf %s %s %s %s %s %s 2>/dev/null; "
-                 "mkdir -p %s %s %s %s %s %s 2>/dev/null; true",
-                 base_data_dir, base_backup_dir, base_global_dir,
-                 history_data_dir, history_backup_dir, history_global_dir,
-                 base_data_dir, base_backup_dir, base_global_dir,
-                 history_data_dir, history_backup_dir, history_global_dir);
-        system(cmd);
+
+        if (!fwx_is_safe_path(terminal_root_dir) || !fwx_is_safe_path(history_root_dir)) {
+            LOG_WARN("skip unsafe record data reset\n");
+        } else {
+            snprintf(cmd, sizeof(cmd),
+                     "rm -rf %s %s %s %s %s %s 2>/dev/null; "
+                     "mkdir -p %s %s %s %s %s %s 2>/dev/null; true",
+                     base_data_dir, base_backup_dir, base_global_dir,
+                     history_data_dir, history_backup_dir, history_global_dir,
+                     base_data_dir, base_backup_dir, base_global_dir,
+                     history_data_dir, history_backup_dir, history_global_dir);
+            system(cmd);
+        }
 
         if (access(history_visit_db_path, F_OK) == 0) {
             clear_visit_db_tables(history_visit_db_path);
@@ -7672,21 +7694,23 @@ typedef struct fwx_api_node{
 }fwx_api_node_t;
 
 static void fwx_forward_to_agent(struct json_object *req_obj) {
-	char *cmd_buf = NULL;
-	if (!req_obj)
-		return;
-	LOG_WARN("forward to agent\n");
-    const char *req_str = json_object_to_json_string(req_obj);
-	LOG_WARN("forward to agent req_str = %s\n", req_str);
-	int buf_len = strlen(req_str) + 128;
-	cmd_buf = (char *)malloc(buf_len);
-	if (!cmd_buf)
-		return;
-    snprintf(cmd_buf, buf_len, "ubus -t 2 call fwx_agent forward '%s'", req_str);
+    uint32_t obj_id = 0;
+    struct blob_buf b = {0};
 
-	LOG_WARN("forward cmd buf = %s\n", cmd_buf);
-	system(cmd_buf);
-	free(cmd_buf);
+    if (!req_obj || !ubus_ctx)
+        return;
+
+    const char *req_str = json_object_to_json_string(req_obj);
+    LOG_WARN("forward to agent req_str = %s\n", req_str);
+
+    /* 直接经 libubus 转发，避免将用户数据拼入 shell 命令导致命令注入 */
+    if (ubus_lookup_id(ubus_ctx, "fwx_agent", &obj_id) != 0)
+        return;
+
+    blob_buf_init(&b, 0);
+    blobmsg_add_json_from_string(&b, req_str);
+    ubus_invoke(ubus_ctx, obj_id, "forward", b.head, NULL, NULL, 2000);
+    blob_buf_free(&b);
 }
 
 struct json_object *fwx_api_get_dashboard_common(struct json_object *req_obj);

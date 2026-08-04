@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <ctype.h>
 #include <libubox/uloop.h>
 #include <libubox/utils.h>
 #include <libubus.h>
@@ -2168,9 +2169,16 @@ static void update_client_wireless_status_by_ifname(const char *ifname, const ch
     struct json_object *assoc_obj = NULL;
     struct json_object *results_obj = NULL;
     int i;
+    const char *p;
 
     if (!ifname || ifname[0] == '\0') {
         return;
+    }
+
+    /* ifname 会拼入 popen 命令，限制为接口名字符，防止命令注入 */
+    for (p = ifname; *p; p++) {
+        if (!(isalnum((unsigned char)*p) || *p == '_' || *p == '-' || *p == '.'))
+            return;
     }
 
     snprintf(cmd, sizeof(cmd), "ubus call iwinfo assoclist '{\"device\":\"%s\"}' 2>/dev/null", ifname);
@@ -3764,6 +3772,10 @@ static void mac_to_dirname(const char *mac, char *dirname, size_t len) {
 
 static int ensure_dir_exists(const char *path) {
     char cmd[512] = {0};
+
+    if (!fwx_is_safe_path(path))
+        return -1;
+
     snprintf(cmd, sizeof(cmd), "mkdir -p %s", path);
     system(cmd);
 

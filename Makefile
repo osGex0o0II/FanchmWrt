@@ -94,11 +94,6 @@ tmp/.prereq_packages: .config
 	touch $@
 endif
 fwx_init:
-	@sh "$(TOPDIR)/fanchmwrt/scripts/update-product-feature.sh" \
-		--feature-file "$(TOPDIR)/package/base-files/files/etc/product_feature" \
-		--board "$(CONFIG_TARGET_BOARD)" \
-		--arch "$(CONFIG_ARCH)" \
-		--rootfs-size "$(CONFIG_TARGET_ROOTFS_PARTSIZE)"
 	@sh "$(TOPDIR)/fanchmwrt/scripts/apply-feeds-overlays.sh" \
 		--source "$(TOPDIR)/fanchmwrt/overlays/feeds" \
 		--destination "$(TOPDIR)/feeds"

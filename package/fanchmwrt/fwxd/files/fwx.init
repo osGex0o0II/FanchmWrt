@@ -13,6 +13,9 @@ stop_service(){
 }
 
 start_service(){
+	# 同步出厂安全状态：root 密码为空时关闭空密码 SSH 并标记 setup_mode
+	/usr/bin/fwx_setup_sync.sh now
+
 	lsmod |grep "fwx " >/dev/null
 	if [ $? -ne 0 ];then
 		modprobe fwx

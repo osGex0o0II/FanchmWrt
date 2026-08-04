@@ -242,6 +242,11 @@ int fwx_uci_set_value(struct uci_context *ctx, char *key, char *value)
     int dummy;
     char *parameters ;
     char param_tmp[2048] = {0};
+
+    if (!key || !value || strlen(key) + strlen(value) >= sizeof(param_tmp)) {
+        printf("key or value too long\n");
+        return -1;
+    }
     sprintf(param_tmp, "%s=%s", key, value);
     if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
         ret = 1;

@@ -252,6 +252,9 @@ endif
 ifneq ($(CONFIG_USE_APK),)
 	mkdir -p $(1)/etc/apk/repositories.d
 	$(call FeedSourcesAppendAPK,$(1)/etc/apk/repositories.d/distfeeds.list)
+	# fanchmwrt feed 仅用于构建期提供 luci-app-fwx-* 等软件包，
+	# 其 GitHub 源不提供可供设备在线安装的 APK 仓库，
+	# 故从设备 distfeeds.list 移除，避免设备 apk 更新报错。
 	sed -i '/fanchmwrt/d' $(1)/etc/apk/repositories.d/distfeeds.list
 	$(VERSION_SED_SCRIPT) $(1)/etc/apk/repositories.d/distfeeds.list
 

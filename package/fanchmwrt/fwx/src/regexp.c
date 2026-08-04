@@ -75,15 +75,17 @@ static RE* compile(char *regexp)
 					tmp->type = LIST;
 					tmp->nccl = 0;
 					tmp->ccl = getmem(11);
+					if (!tmp->ccl) { err_flag = 1; break; }
 					creat_list(tmp->ccl, '0','9');
-					tmp->ccl[11] = '\0';
+					tmp->ccl[10] = '\0';
 				}else if(*regexp == 'D')
 				{
 					tmp->type = LIST;
 					tmp->nccl = 1;
 					tmp->ccl = getmem(11);
+					if (!tmp->ccl) { err_flag = 1; break; }
 					creat_list(tmp->ccl, '0','9');
-					tmp->ccl[11] = '\0';
+					tmp->ccl[10] = '\0';
 				}else
 				{
 					tmp->type = CHAR;
@@ -112,6 +114,7 @@ static RE* compile(char *regexp)
 				break;
 			case '[':
 				pstr = tmp->ccl = getmem(256);
+				if (!pstr) { err_flag = 1; break; }
 				tmp->nccl = 0;
 				if(*++regexp == '^')
 				{
@@ -122,6 +125,11 @@ static RE* compile(char *regexp)
 				{
 					if(*regexp != '-')
 					{
+						if((size_t)(pstr - tmp->ccl) >= 255)
+						{
+							err_flag = 1;
+							break;
+						}
 						*pstr++ = *regexp++;
 						continue;
 					}
@@ -130,7 +138,18 @@ static RE* compile(char *regexp)
 						err_flag = 1;
 						break;
 					}
-					pstr += creat_list(pstr, *(regexp - 1) + 1, *(regexp + 1));
+					{
+						int cs = *(regexp - 1) + 1;
+						int ce = *(regexp + 1);
+						size_t rlen = (ce >= cs) ? (size_t)(ce - cs + 1) : 0;
+						if((size_t)(pstr - tmp->ccl) + rlen >= 256)
+						{
+							err_flag = 1;
+							break;
+						}
+						if (rlen)
+							pstr += creat_list(pstr, cs, ce);
+					}
 					regexp += 2;
 				}
 				*pstr = '\0';

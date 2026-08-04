@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <libubox/uloop.h>
 #include <libubox/utils.h>
 #include <libubus.h>
@@ -19,7 +21,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "fwx.h"
-#include <stdio.h>
 #include <json-c/json.h>
 
 #include "fwx_utils.h"
@@ -27,6 +28,39 @@
 
 #define APPFILTER_RULES_STATE_FILE "/tmp/appfilter_rules_state"
 #define APPFILTER_WHITELIST_STATE_FILE "/tmp/appfilter_whitelist_state"
+
+/* 有界字符串拼接：失败（超出缓冲区）返回 -1 */
+static int fwx_rule_append(char *buf, size_t size, const char *fmt, ...)
+{
+    va_list ap;
+    size_t used = strlen(buf);
+    int ret;
+
+    if (used >= size)
+        return -1;
+
+    va_start(ap, fmt);
+    ret = vsnprintf(buf + used, size - used, fmt, ap);
+    va_end(ap);
+
+    if (ret < 0 || (size_t)ret >= size - used)
+        return -1;
+    return 0;
+}
+
+/* 校验 "HH:MM" 时间格式，防止超长/畸形输入进入 uci */
+static int fwx_is_valid_hhmm(const char *s)
+{
+    int h, m;
+
+    if (!s || !*s)
+        return 0;
+    if (sscanf(s, "%d:%d", &h, &m) != 2)
+        return 0;
+    if (h < 0 || h > 23 || m < 0 || m > 59)
+        return 0;
+    return 1;
+}
 
 
 static void set_state_file(const char *file_path) {
@@ -315,17 +349,35 @@ struct json_object *fwx_api_add_filter_rule(struct json_object *req_obj) {
 
         char time_rule_str[256] = {0};
         int weekdays_len = json_object_array_length(weekdays_obj);
+        int overflow = 0;
+        const char *start_time_str;
+        const char *end_time_str;
+
+        start_time_str = json_object_get_string(start_time_obj);
+        end_time_str = json_object_get_string(end_time_obj);
+        if (!fwx_is_valid_hhmm(start_time_str) || !fwx_is_valid_hhmm(end_time_str)) {
+            LOG_ERROR("invalid start/end time in filter rule\n");
+            continue;
+        }
+
         for (j = 0; j < weekdays_len; j++) {
             struct json_object *weekday_obj = json_object_array_get_idx(weekdays_obj, j);
-            char weekday_str[16];
-            snprintf(weekday_str, sizeof(weekday_str), "%d", json_object_get_int(weekday_obj));
-            if (j > 0) strcat(time_rule_str, ",");
-            strcat(time_rule_str, weekday_str);
+            if (fwx_rule_append(time_rule_str, sizeof(time_rule_str),
+                                j > 0 ? ",%d" : "%d",
+                                json_object_get_int(weekday_obj)) != 0) {
+                overflow = 1;
+                break;
+            }
         }
-        strcat(time_rule_str, ",");
-        strcat(time_rule_str, json_object_get_string(start_time_obj));
-        strcat(time_rule_str, ",");
-        strcat(time_rule_str, json_object_get_string(end_time_obj));
+        if (!overflow &&
+            fwx_rule_append(time_rule_str, sizeof(time_rule_str), ",%s,%s",
+                            start_time_str, end_time_str) != 0)
+            overflow = 1;
+
+        if (overflow) {
+            LOG_ERROR("time_rule too long, skip rule\n");
+            continue;
+        }
 
         snprintf(buf, sizeof(buf), "appfilter.@rule[-1].time_rule");
         fwx_uci_add_list(uci_ctx, buf, time_rule_str);
@@ -445,17 +497,35 @@ struct json_object *fwx_api_update_filter_rule(struct json_object *req_obj) {
 
             char time_rule_str[256] = {0};
             int weekdays_len = json_object_array_length(weekdays_obj);
+            int overflow = 0;
+            const char *start_time_str;
+            const char *end_time_str;
+
+            start_time_str = json_object_get_string(start_time_obj);
+            end_time_str = json_object_get_string(end_time_obj);
+            if (!fwx_is_valid_hhmm(start_time_str) || !fwx_is_valid_hhmm(end_time_str)) {
+                LOG_ERROR("invalid start/end time in filter rule\n");
+                continue;
+            }
+
             for (j = 0; j < weekdays_len; j++) {
                 struct json_object *weekday_obj = json_object_array_get_idx(weekdays_obj, j);
-                char weekday_str[16];
-                snprintf(weekday_str, sizeof(weekday_str), "%d", json_object_get_int(weekday_obj));
-                if (j > 0) strcat(time_rule_str, ",");
-                strcat(time_rule_str, weekday_str);
+                if (fwx_rule_append(time_rule_str, sizeof(time_rule_str),
+                                    j > 0 ? ",%d" : "%d",
+                                    json_object_get_int(weekday_obj)) != 0) {
+                    overflow = 1;
+                    break;
+                }
             }
-            strcat(time_rule_str, ",");
-            strcat(time_rule_str, json_object_get_string(start_time_obj));
-            strcat(time_rule_str, ",");
-            strcat(time_rule_str, json_object_get_string(end_time_obj));
+            if (!overflow &&
+                fwx_rule_append(time_rule_str, sizeof(time_rule_str), ",%s,%s",
+                                start_time_str, end_time_str) != 0)
+                overflow = 1;
+
+            if (overflow) {
+                LOG_ERROR("time_rule too long, skip rule\n");
+                continue;
+            }
 
             snprintf(buf, sizeof(buf), "appfilter.@rule[%d].time_rule", index);
             fwx_uci_add_list(uci_ctx, buf, time_rule_str);

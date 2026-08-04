@@ -1,0 +1,4 @@
+#!/bin/sh
+# 出厂安全初始化：root 密码为空时进入 setup 模式并关闭空密码 SSH
+/usr/bin/fwx_setup_sync.sh
+exit 0

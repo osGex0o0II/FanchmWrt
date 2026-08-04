@@ -184,7 +184,7 @@ nf_client_list_clear(void)
 			spin_unlock_bh(&p->visit_info_lock);
 
 			list_del(&(p->hlist));
-			kfree(p);
+			af_client_put(p);
 		}
 	}
 	AF_CLIENT_UNLOCK_W();
@@ -294,6 +294,7 @@ nf_client_add(unsigned char *mac)
 	}
 
 	memset(node, 0, sizeof(af_client_info_t));
+	refcount_set(&node->refcnt, 1);
 	memcpy(node->mac, mac, MAC_ADDR_LEN);
 	node->record_whitelist = fwx_match_record_whitelist(node->mac);
 
@@ -320,6 +321,15 @@ nf_client_add(unsigned char *mac)
 
 
 
+/* 释放 client 引用：引用计数归零时才真正释放内存。
+ * proc 文件可能长时间持有 client 引用，防止被 check_client_expire 提前释放。 */
+void af_client_put(af_client_info_t *node)
+{
+	if (node && refcount_dec_and_test(&node->refcnt))
+		kfree(node);
+}
+
+
 void check_client_expire(void)
 {
 	af_client_info_t *node;
@@ -337,7 +347,7 @@ void check_client_expire(void)
 				stop_client_timer(node);
 				remove_client_proc_dir(node);
 				list_del(&(node->hlist));
-				kfree(node);
+				af_client_put(node);
 				AF_CLIENT_UNLOCK_W();
 				return;
 			}

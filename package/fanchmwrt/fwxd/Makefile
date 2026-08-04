@@ -53,9 +53,16 @@ define Package/fwxd/install
 	$(INSTALL_BIN) ./files/gen_class.sh $(1)/usr/bin
 	$(INSTALL_BIN) ./files/fwx_cli.sh $(1)/usr/bin
 	$(INSTALL_BIN) ./files/fwx_app_init.sh $(1)/usr/bin/fwx_app_init
+	$(INSTALL_BIN) ./files/fwx_setup_sync.sh $(1)/usr/bin/fwx_setup_sync.sh
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/fwxd $(1)/usr/bin
 	$(INSTALL_BIN) ./files/fwx-dump.sh $(1)/usr/bin/fwx-dump
 	$(INSTALL_BIN) ./files/rule_manager.lua $(1)/usr/bin/rule_manager
+	# 由构建配置生成 product_feature（构建期输出到镜像，不污染源码树）
+	sh "$(TOPDIR)/fanchmwrt/scripts/update-product-feature.sh" \
+		--feature-file "$(1)/etc/product_feature" \
+		--board "$(call qstrip,$(CONFIG_TARGET_BOARD))" \
+		--arch "$(call qstrip,$(CONFIG_ARCH))" \
+		--rootfs-size "$(call qstrip,$(CONFIG_TARGET_ROOTFS_PARTSIZE))"
 	$(INSTALL_DATA) ./files/appfilter.config $(1)/etc/config/appfilter
 	$(INSTALL_DATA) ./files/macfilter.config $(1)/etc/config/macfilter
 	$(INSTALL_DATA) ./files/user_info.config $(1)/etc/config/user_info

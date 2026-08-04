@@ -702,6 +702,17 @@ static af_feature_node_t *af_match_non_url_feature(flow_info_t *flow, af_ac_matc
 	return NULL;
 }
 
+/* 限长段拷贝：将 [begin,end) 拷贝到 dst，截断并强制 NUL，防止越界写 */
+static void fwx_seg_copy(char *dst, size_t dst_size, char *begin, char *end)
+{
+	size_t len = (size_t)(end - begin);
+
+	if (len >= dst_size)
+		len = dst_size - 1;
+	memcpy(dst, begin, len);
+	dst[len] = '\0';
+}
+
 
 int __add_app_feature(char *feature, int appid, char *name, int proto, int src_port,
 					  port_info_t dport_info, char *host_url, char *request_url, char *dict, char *search_str, int ignore)
@@ -721,15 +732,15 @@ int __add_app_feature(char *feature, int appid, char *name, int proto, int src_p
 	else
 	{
 		node->app_id = appid;
-		strcpy(node->app_name, name);
+		strscpy(node->app_name, name, sizeof(node->app_name));
 		node->proto = proto;
 		node->dport_info = dport_info;
 		node->sport = src_port;
-		strcpy(node->host_url, host_url);
-		strcpy(node->request_url, request_url);
-		strcpy(node->search_str, search_str);
+		strscpy(node->host_url, host_url, sizeof(node->host_url));
+		strscpy(node->request_url, request_url, sizeof(node->request_url));
+		strscpy(node->search_str, search_str, sizeof(node->search_str));
 		node->ignore = ignore;
-		strcpy(node->feature, feature);
+		strscpy(node->feature, feature, sizeof(node->feature));
 		if (ignore)
 			AF_DEBUG("add feature %s, ignore = %d\n", feature, ignore);
 
@@ -742,7 +753,7 @@ int __add_app_feature(char *feature, int appid, char *name, int proto, int src_p
 			if (*p == '|')
 			{
 				memset(pos, 0x0, sizeof(pos));
-				strncpy(pos, begin, p - begin);
+				fwx_seg_copy(pos, sizeof(pos), begin, p);
 				k_sscanf(pos, "%d:%x", &index, &value);
 				begin = p + 1;
 				node->pos_info[node->pos_num].pos = index;
@@ -940,30 +951,30 @@ int add_app_feature(int appid, char *name, char *feature)
 		{
 
 		case AF_PROTO_PARAM_INDEX:
-			strncpy(proto_str, begin, p - begin);
+			fwx_seg_copy(proto_str, sizeof(proto_str), begin, p);
 			break;
 		case AF_SRC_PORT_PARAM_INDEX:
-			strncpy(src_port_str, begin, p - begin);
+			fwx_seg_copy(src_port_str, sizeof(src_port_str), begin, p);
 			break;
 		case AF_DST_PORT_PARAM_INDEX:
-			strncpy(dst_port_str, begin, p - begin);
+			fwx_seg_copy(dst_port_str, sizeof(dst_port_str), begin, p);
 			break;
 
 		case AF_HOST_URL_PARAM_INDEX:
-			strncpy(host_url, begin, p - begin);
+			fwx_seg_copy(host_url, sizeof(host_url), begin, p);
 			break;
 
 		case AF_REQUEST_URL_PARAM_INDEX:
-			strncpy(request_url, begin, p - begin);
+			fwx_seg_copy(request_url, sizeof(request_url), begin, p);
 			break;
 		case AF_DICT_PARAM_INDEX:
-			strncpy(dict, begin, p - begin);
+			fwx_seg_copy(dict, sizeof(dict), begin, p);
 			break;
 		case AF_STR_PARAM_INDEX:
-			strncpy(search_str, begin, p - begin);
+			fwx_seg_copy(search_str, sizeof(search_str), begin, p);
 			break;
 		case AF_IGNORE_PARAM_INDEX:
-			strncpy(tmp_buf, begin, p - begin);
+			fwx_seg_copy(tmp_buf, sizeof(tmp_buf), begin, p);
 			ignore = k_atoi(tmp_buf);
 			break;
 		}
@@ -974,11 +985,11 @@ int add_app_feature(int appid, char *name, char *feature)
 
 
 	if (param_num == AF_DICT_PARAM_INDEX){
-		strncpy(dict, begin, p - begin);
+		fwx_seg_copy(dict, sizeof(dict), begin, p);
 	}
 
 	if (param_num == AF_IGNORE_PARAM_INDEX){
-		strncpy(tmp_buf, begin, p - begin);
+		fwx_seg_copy(tmp_buf, sizeof(tmp_buf), begin, p);
 		ignore = k_atoi(tmp_buf);
 	}
 
@@ -1037,7 +1048,12 @@ void af_init_feature(char *feature_str)
 	}
 
 	if (pos && len)
-		strncpy(feature_buf, pos, len);
+	{
+		if (len >= MAX_FEATURE_LINE_LEN)
+			len = MAX_FEATURE_LINE_LEN - 1;
+		memcpy(feature_buf, pos, len);
+		feature_buf[len] = '\0';
+	}
 	p = feature_buf;
 	begin = feature_buf;
 
@@ -1045,8 +1061,8 @@ void af_init_feature(char *feature_str)
 	{
 		if (*p == ',')
 		{
-			if (p - begin > MAX_FEATURE_STR_LEN){
-				printk("error, feature len error %d\n", p - len);
+			if (p - begin >= MAX_FEATURE_STR_LEN){
+				printk("error, feature len error %d\n", (int)(p - begin));
 				break;
 			}
 			memcpy((char *)feature, begin, p - begin);
@@ -1058,8 +1074,8 @@ void af_init_feature(char *feature_str)
 	if (p != begin)
 	{
 
-		if (p - begin > MAX_FEATURE_STR_LEN){
-			printk("error, feature len error %d\n", p - len);
+		if (p - begin >= MAX_FEATURE_STR_LEN){
+			printk("error, feature len error %d\n", (int)(p - begin));
 		}
 		else{
 			memcpy((char *)feature, begin, p - begin);

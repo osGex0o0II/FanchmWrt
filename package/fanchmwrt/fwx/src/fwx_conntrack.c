@@ -164,16 +164,20 @@ struct af_conn_iter_state
 
 static void *af_conn_seq_start(struct seq_file *s, loff_t *pos)
 {
-    if (*pos == 0)
-    {
-        return SEQ_START_TOKEN;
-    }
     struct af_conn_iter_state *st = s->private;
-    while (st->bucket < AF_CONN_HASH_SIZE){
-        if (!hlist_empty(&(af_conn_table[st->bucket])))
-        {
-            return &af_conn_table[st->bucket++].first->next;
-        }
+    struct hlist_node *node;
+
+    /* 遍历期间持锁，防止 af_conn_clean_timeout 并发 kfree 造成 UAF */
+    spin_lock(&af_conn_lock);
+
+    if (*pos == 0)
+        return SEQ_START_TOKEN;
+
+    st->bucket = 0;
+    while (st->bucket < AF_CONN_HASH_SIZE) {
+        node = af_conn_table[st->bucket].first;
+        if (node)
+            return node;
         st->bucket++;
     }
     return NULL;
@@ -181,41 +185,58 @@ static void *af_conn_seq_start(struct seq_file *s, loff_t *pos)
 
 static void *af_conn_seq_next(struct seq_file *s, void *v, loff_t *pos)
 {
+    struct af_conn_iter_state *st = s->private;
+    struct hlist_node *node;
+
     (*pos)++;
-    if (v == SEQ_START_TOKEN){
+    if (v == SEQ_START_TOKEN) {
+        st->bucket = 0;
+        while (st->bucket < AF_CONN_HASH_SIZE) {
+            node = af_conn_table[st->bucket].first;
+            if (node)
+                return node;
+            st->bucket++;
+        }
         return NULL;
     }
-    struct hlist_node *node = (struct hlist_node *)v;
-    node = node->next;
-    if (node != NULL)
+
+    node = ((struct hlist_node *)v)->next;
+    if (node)
         return node;
+
+    st->bucket++;
+    while (st->bucket < AF_CONN_HASH_SIZE) {
+        node = af_conn_table[st->bucket].first;
+        if (node)
+            return node;
+        st->bucket++;
+    }
     return NULL;
 }
 
 static void af_conn_seq_stop(struct seq_file *s, void *v)
 {
+    spin_unlock(&af_conn_lock);
 }
 
 static int af_conn_seq_show(struct seq_file *s, void *v)
 {
     unsigned char src_ip_str[32] = {0};
     unsigned char dst_ip_str[32] = {0};
-    static int index = 0;
     af_conn_t *node = (af_conn_t *)v;
     if (v == SEQ_START_TOKEN)
     {
-        index = 0;
         seq_printf(s, "%-4s %-20s %-20s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n",
         "Id", "src_ip", "dst_ip", "src_port", "dst_port", "protocol", "app_id", "drop", "inactive", "total_pkts");
         return 0;
     }
 
-    index++;
     sprintf(src_ip_str, "%pI4", &node->src_ip);
     sprintf(dst_ip_str, "%pI4", &node->dst_ip);
     u_int32_t inactive_time = jiffies - node->last_jiffies;
 
-    seq_printf(s, "%-4d %-20s %-20s %-12d %-12d %-12d %-12d %-12d %-12d %-12d\n", index, src_ip_str, dst_ip_str,
+    seq_printf(s, "%-4lld %-20s %-20s %-12d %-12d %-12d %-12d %-12d %-12d %-12d\n",
+               (long long)s->index, src_ip_str, dst_ip_str,
                node->src_port, node->dst_port, node->protocol, node->app_id, node->drop, inactive_time, node->total_pkts);
     return 0;
 }

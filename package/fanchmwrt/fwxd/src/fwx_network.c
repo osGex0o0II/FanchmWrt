@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <libubox/uloop.h>
 #include <libubox/utils.h>
 #include <libubus.h>
@@ -97,10 +98,17 @@ DONE:
 
 
 char *get_interface_status_buf(char *ifname) {
+    const char *p;
+
     if (!ifname) {
         return NULL;
     }
 
+    /* ifname 会拼入 popen("ifstatus %s")，必须限制为接口名字符 */
+    for (p = ifname; *p; p++) {
+        if (!(isalnum((unsigned char)*p) || *p == '_' || *p == '-' || *p == '.'))
+            return NULL;
+    }
 
     char cmd[256] = {0};
     snprintf(cmd, sizeof(cmd), "ifstatus %s", ifname);

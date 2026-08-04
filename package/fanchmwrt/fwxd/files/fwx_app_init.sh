@@ -60,6 +60,12 @@ for app_dir in "$APP_ROOT"/*; do
 	[ -d "$app_dir" ] || continue
 	app_name="$(basename "$app_dir")"
 
+	# 应用名仅允许安全字符，避免路径穿越
+	echo "$app_name" | grep -Eq '^[A-Za-z0-9_.-]+$' || {
+		write_boot_code "$app_dir" "$BOOT_CODE_UNKNOWN"
+		continue
+	}
+
 	icon_src="$APP_CACHE_ROOT/$app_name/icon.png"
 	if [ -f "$icon_src" ]; then
 		icon_web_dir="$ICON_WEB_ROOT/$app_name"
@@ -98,7 +104,11 @@ for app_dir in "$APP_ROOT"/*; do
 	write_boot_code "$app_dir" "$BOOT_CODE_OK"
 
 	init_sh="$app_dir/init.sh"
+	# 仅执行 root 属主、非符号链接的脚本，防止被普通用户/挂载点替换
 	[ -f "$init_sh" ] || continue
+	[ ! -L "$init_sh" ] || continue
+	[ -O "$init_sh" ] || continue
+	sh -n "$init_sh" 2>/dev/null || continue
 
 	$init_sh start
 done

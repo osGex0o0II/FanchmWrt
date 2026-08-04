@@ -61,6 +61,19 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
     }
 
     h = (struct nlmsghdr *)buf;
+    /* 校验报文头与长度字段，防止越读未初始化数据 */
+    if (ret < (int)(NLMSG_HDRLEN + sizeof(struct fwx_nl_msg_hdr)))
+    {
+        printf("netlink msg too short\n");
+        return;
+    }
+    if (h->nlmsg_len < NLMSG_HDRLEN + sizeof(struct fwx_nl_msg_hdr) ||
+        h->nlmsg_len > (unsigned int)ret)
+    {
+        printf("netlink nlmsg_len invalid\n");
+        return;
+    }
+
     char *kmsg = (char *)NLMSG_DATA(h);
     struct fwx_nl_msg_hdr *af_hdr = (struct fwx_nl_msg_hdr *)kmsg;
     if (af_hdr->magic != 0xa0b0c0d0)
@@ -74,6 +87,15 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
         printf("data len error\n");
         return;
     }
+
+    if ((int)(NLMSG_HDRLEN + sizeof(struct fwx_nl_msg_hdr) + af_hdr->len) > ret)
+    {
+        printf("netlink data len exceeds recv size\n");
+        return;
+    }
+
+    if (ret < (int)sizeof(buf))
+        buf[ret] = '\0';
 
     char *kdata = kmsg + sizeof(struct fwx_nl_msg_hdr);
     struct json_object *root = json_tokener_parse(kdata);
@@ -108,8 +130,13 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
     }
 
     struct json_object *ip_obj = json_object_object_get(root, "ip");
-    if (ip_obj)
-        strncpy(node->ip, json_object_get_string(ip_obj), sizeof(node->ip));
+    if (ip_obj) {
+        const char *ip_str = json_object_get_string(ip_obj);
+        if (ip_str) {
+            strncpy(node->ip, ip_str, sizeof(node->ip) - 1);
+            node->ip[sizeof(node->ip) - 1] = '\0';
+        }
+    }
 
     struct json_object *ipv6_obj = json_object_object_get(root, "ipv6");
     if (ipv6_obj) {

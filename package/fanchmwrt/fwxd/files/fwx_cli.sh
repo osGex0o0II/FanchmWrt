@@ -198,6 +198,10 @@ cidr_to_netmask() {
 }
 
 check_and_init_network() {
+    # 首启自动改网仅当显式开启 cli_auto_net 时生效（安全默认：不自动修改网络配置）
+    auto_net=$(uci get fwx.global.cli_auto_net 2>/dev/null)
+    [ "$auto_net" = "1" ] || return 0
+
     # Check if already initialized
     init_flag=$(uci get fwx.global.cli_init 2>/dev/null)
     if [ "$init_flag" = "1" ]; then

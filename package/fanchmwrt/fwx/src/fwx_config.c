@@ -76,8 +76,8 @@ int fwx_config_handle(char *config, unsigned int len)
 	}
 	api_obj = cJSON_GetObjectItem(config_obj, "api");
 	data_obj = cJSON_GetObjectItem(config_obj, "data");
-	if (!api_obj){
-		printk("error, api obj not set\n");
+	if (!api_obj || api_obj->type != cJSON_String || !api_obj->valuestring){
+		printk("error, api obj not set or invalid type\n");
 		cJSON_Delete(config_obj);
 		return -1;
 	}
@@ -154,6 +154,14 @@ static struct file_operations fwx_cdev_ops = {
 	read : fwx_cdev_read,
 };
 
+/* 设备节点 devnode 回调：显式 0600 root:root，禁止非 root 写 /dev/fwx */
+static char *fwx_cdev_devnode(const struct device *dev, umode_t *mode)
+{
+	if (mode)
+		*mode = 0600;
+	return NULL;
+}
+
 int fwx_register_dev(void)
 {
 	struct device *dev;
@@ -176,6 +184,9 @@ int fwx_register_dev(void)
 
 	if (IS_ERR_OR_NULL(g_fwx_dev.c))
 		goto CDEV_OUT;
+
+	/* 显式限定设备节点为 0600 root:root，禁止非 root 进程写 /dev/fwx */
+	g_fwx_dev.c->devnode = fwx_cdev_devnode;
 
 	dev = device_create(g_fwx_dev.c, NULL, g_fwx_dev.id, NULL, FWX_CHAR_DEV);
 	if (IS_ERR_OR_NULL(dev))
