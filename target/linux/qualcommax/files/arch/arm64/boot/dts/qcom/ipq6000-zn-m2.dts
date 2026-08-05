@@ -168,14 +168,14 @@
 			reg = <1>;
 		};
 
-		qca8075_2: ethernet-phy@2 {
-			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <2>;
-		};
-
 		qca8075_3: ethernet-phy@3 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <3>;
+		};
+
+		qca8075_4: ethernet-phy@4 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <4>;
 		};
 	};
 };
@@ -183,8 +183,8 @@
 &switch {
 	status = "okay";
 
-	switch_lan_bmp = <(ESS_PORT1 | ESS_PORT2 | ESS_PORT3)>;
-	switch_wan_bmp = <ESS_PORT4>;
+	switch_lan_bmp = <(ESS_PORT1 | ESS_PORT2 | ESS_PORT4)>;
+	switch_wan_bmp = <ESS_PORT5>;
 	switch_mac_mode = <MAC_MODE_PSGMII>;
 
 	qcom,port_phyinfo {
@@ -196,13 +196,13 @@
 			port_id = <2>;
 			phy_address = <1>;
 		};
-		port@3 {
-			port_id = <3>;
-			phy_address = <2>;
-		};
 		port@4 {
 			port_id = <4>;
 			phy_address = <3>;
+		};
+		port@5 {
+			port_id = <5>;
+			phy_address = <4>;
 		};
 	};
 };
@@ -223,15 +223,20 @@
 	label = "lan2";
 };
 
+/* 兆能 M2 无 ESS port3/phy2 的 RJ45 口 */
 &dp3 {
-	status = "okay";
-	phy-handle = <&qca8075_2>;
-	label = "lan3";
+	status = "disabled";
 };
 
 &dp4 {
 	status = "okay";
 	phy-handle = <&qca8075_3>;
+	label = "lan3";
+};
+
+&dp5 {
+	status = "okay";
+	phy-handle = <&qca8075_4>;
 	label = "wan";
 };
 
