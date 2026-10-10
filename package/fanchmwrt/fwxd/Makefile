@@ -2,7 +2,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=fwxd
-PKG_VERSION:=1.0.1
+PKG_VERSION:=1.0.4
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
@@ -12,7 +12,7 @@ TARGET_CFLAGS +=-Werror=implicit-function-declaration
 define Package/fwxd
   SECTION:=Base system
   CATEGORY:=Base system
-  DEPENDS:=+libubox +libubus  +libuci +libpthread +libjson-c +libblobmsg-json +libuci-lua +libfwx_common +libsqlite3 +libmosquitto +libcurl +TARGET_x86:lm-sensors
+  DEPENDS:=+libubox +libubus  +libuci +libpthread +libjson-c +libblobmsg-json +libuci-lua +libfwx_common +libsqlite3 +libmosquitto +libcurl +libopenssl +rpcd +PACKAGE_rpcd:rpcd-mod-iwinfo +TARGET_x86:lm-sensors
   TITLE:=Fanchm fwx application
 endef
 
@@ -25,7 +25,7 @@ define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR)/ \
 	CC="$(TARGET_CROSS)gcc" \
 	CFLAGS="$(TARGET_CFLAGS)" \
-	LIBS="$(TARGET_LDFLAGS) -lm -lpthread -lubox -luci -lubus -ljson-c -lblobmsg_json -lfwx_common -lsqlite3" \
+	LIBS="$(TARGET_LDFLAGS) -lm -lpthread -lubox -luci -lubus -ljson-c -lblobmsg_json -lfwx_common -lsqlite3 -lcurl -lcrypto" \
 	all
 endef	
 
@@ -38,6 +38,11 @@ define Package/fwxd/description
   fwxd app
 endef
 
+define Package/fwxd/conffiles
+/etc/fwxd/custom_feature.cfg
+/etc/config/fwx
+endef
+
 
 define Package/fwxd/install
 	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/init.d
@@ -47,10 +52,10 @@ define Package/fwxd/install
 	$(INSTALL_DIR) $(1)/fwx_data
 	$(INSTALL_DIR) $(1)/fwx_root
 	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d/
-	$(CP) ./files/*.cfg $(1)/etc/fwxd/ 
+	$(INSTALL_DATA) ./files/feature.bin $(1)/etc/fwxd/feature.bin
+	$(INSTALL_DATA) ./files/custom_feature.cfg $(1)/etc/fwxd/custom_feature.cfg
 	$(INSTALL_BIN) ./files/uci-defaults/* $(1)/etc/uci-defaults/
 	$(INSTALL_BIN) ./files/fwx.init $(1)/etc/init.d/fwx
-	$(INSTALL_BIN) ./files/gen_class.sh $(1)/usr/bin
 	$(INSTALL_BIN) ./files/fwx_cli.sh $(1)/usr/bin
 	$(INSTALL_BIN) ./files/fwx_app_init.sh $(1)/usr/bin/fwx_app_init
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/fwxd $(1)/usr/bin

@@ -5,6 +5,8 @@
 
 {% include('header', { blank_page: true }) %}
 
+<link rel="stylesheet" href="{{ media }}/login.css">
+
 <section hidden>
 	<form method="post" class="cbi-map">
 		<div class="cbi-section">
@@ -13,12 +15,14 @@
 					<label class="cbi-value-title" for="luci_username">{{ _('Username') }}</label>
 					<div class="cbi-value-field">
 						<input name="luci_username" id="luci_username" type="text" autocomplete="username" value="{{ entityencode(duser, true) }}">
+						<span class="login_field_icon login_user_icon" aria-hidden="true"></span>
 					</div>
 				</div>
 				<div class="cbi-value">
 					<label class="cbi-value-title" for="luci_password">{{ _('Password') }}</label>
 					<div class="cbi-value-field">
 						<input name="luci_password" id="luci_password" type="password" autocomplete="current-password">
+						<span class="login_field_icon login_password_icon" aria-hidden="true"></span>
 					</div>
 				</div>
 			</div>
@@ -27,7 +31,7 @@
 
 	<hr>
 
-	{% if (fuser): %}
+	{% if (http.getenv('REQUEST_METHOD') == 'POST' && fuser): %}
 	<div class="alert-message error">
 		{{ _('Invalid username and/or password! Please try again.') }}
 	</div>

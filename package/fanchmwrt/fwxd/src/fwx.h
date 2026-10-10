@@ -13,7 +13,7 @@
 #include <json-c/json.h>
 #include "fwx_uci.h"
 
-#define OAF_VERSION "1.0.3"
+#define OAF_VERSION "1.0.4"
 #define API_CODE_SUCCESS 2000
 #define API_CODE_ERROR 4000
 #define LOG_FILE_PATH "/tmp/log/fwxd.log"

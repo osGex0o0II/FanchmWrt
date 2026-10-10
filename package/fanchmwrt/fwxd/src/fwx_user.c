@@ -26,6 +26,7 @@
 #include "fwx_config.h"
 #include "fwx.h"
 #include "fwx_user.h"
+#include "fwx_user_summary.h"
 #include "fwx_utils.h"
 
 
@@ -443,6 +444,8 @@ static struct json_object *serialize_daily_top_apps_stats(const daily_top_apps_s
     for (i = 0; i < MAX_TOP_APPS_PER_DAY; i++) {
         struct json_object *app_obj = json_object_new_object();
         json_object_object_add(app_obj, "appid", json_object_new_int(stat->apps[i].appid));
+        if (!app_icon_exists_by_id(stat->apps[i].appid))
+            json_object_object_add(app_obj, "icon", json_object_new_int(0));
         json_object_object_add(app_obj, "total_time", json_object_new_int64(stat->apps[i].total_time));
         json_object_array_add(apps, app_obj);
     }
@@ -494,6 +497,8 @@ void save_client_backup_to_file(client_node_t *client) {
     json_object_object_add(json_obj, "online_session", serialize_online_session_stat(&client->online_session));
     json_object_object_add(json_obj, "daily_stats", serialize_daily_stats(&client->daily_stats));
     json_object_object_add(json_obj, "daily_top_apps_stats", serialize_daily_top_apps_stats(&client->daily_top_apps_stats));
+    if (client->daily_summary)
+        json_object_object_add(json_obj, "daily_summary", json_object_get(client->daily_summary));
 
     if (json_object_to_file_ext(file_path, json_obj, JSON_C_TO_STRING_PRETTY) != 0) {
         LOG_ERROR("Failed to save client backup to file: %s (errno: %d)\n", file_path, errno);
@@ -744,6 +749,16 @@ static int load_client_backup_from_file(const char *file_path) {
         load_daily_stats_from_json(&client->daily_stats, daily_stats_obj);
     if (json_object_object_get_ex(json_obj, "daily_top_apps_stats", &daily_top_apps_obj))
         load_daily_top_apps_from_json(&client->daily_top_apps_stats, daily_top_apps_obj);
+    if (json_object_object_get_ex(json_obj, "daily_summary", &value_obj) &&
+        json_object_is_type(value_obj, json_type_object) &&
+        json_object_get_int(json_object_object_get(value_obj, "schema_version")) == 1 &&
+        json_object_is_type(json_object_object_get(value_obj, "date"), json_type_string) &&
+        strlen(json_object_get_string(json_object_object_get(value_obj, "date"))) == 10 &&
+        json_object_is_type(json_object_object_get(value_obj, "app_seconds"), json_type_object) &&
+        json_object_is_type(json_object_object_get(value_obj, "category_seconds"), json_type_object)) {
+        if (client->daily_summary) json_object_put(client->daily_summary);
+        client->daily_summary = json_object_get(value_obj);
+    }
 
     json_object_put(json_obj);
     return 0;
@@ -2501,6 +2516,7 @@ void flush_expire_client_node(void)
                 list_del(&stat_node->list);
                 free(stat_node);
             }
+            release_client_daily_summary(node);
             list_del(&node->client);
             free(node);
             count++;
@@ -3129,6 +3145,8 @@ void save_daily_stats_to_file(client_node_t *client, u_int32_t date) {
             if (stat->hourly_top_apps[hour][i] > 0) {
                 struct json_object *app_obj = json_object_new_object();
                 json_object_object_add(app_obj, "appid", json_object_new_int(stat->hourly_top_apps[hour][i]));
+                if (!app_icon_exists_by_id(stat->hourly_top_apps[hour][i]))
+                    json_object_object_add(app_obj, "icon", json_object_new_int(0));
                 const char *app_name = get_app_name_by_id(stat->hourly_top_apps[hour][i]);
                 if (app_name) {
                     json_object_object_add(app_obj, "name", json_object_new_string(app_name));
@@ -3379,6 +3397,170 @@ void save_global_traffic_stats_to_file(u_int32_t date) {
         LOG_ERROR("Failed to save global traffic stats to file: %s (errno: %d)\n", file_path, errno);
     }
     
+    json_object_put(json_obj);
+}
+
+static int build_global_traffic_backup_path(u_int32_t date, char *path, size_t len)
+{
+    char date_str[32] = {0};
+    char dir[512] = {0};
+
+    if (!path || len == 0)
+        return -1;
+
+    get_date_string(date, date_str, sizeof(date_str));
+    snprintf(dir, sizeof(dir), "%s/global/stats", get_client_data_root_dir());
+    if (ensure_dir_exists(dir) != 0)
+        return -1;
+
+    return snprintf(path, len, "%s/traffic_%s.json", dir, date_str) >= (int)len ? -1 : 0;
+}
+
+static void archive_stale_global_traffic_backups(u_int32_t today)
+{
+    char dir[512] = {0};
+    DIR *dp;
+    struct dirent *entry;
+
+    snprintf(dir, sizeof(dir), "%s/global/stats", get_client_data_root_dir());
+    dp = opendir(dir);
+    if (!dp)
+        return;
+
+    while ((entry = readdir(dp)) != NULL) {
+        char date_str[32] = {0};
+        char source_path[512] = {0};
+        char target_dir[512] = {0};
+        char target_path[512] = {0};
+        struct json_object *json_obj = NULL;
+        const char *json_string;
+        FILE *fp;
+        u_int32_t date;
+
+        if (strlen(entry->d_name) != 23 || strncmp(entry->d_name, "traffic_", 8) != 0 ||
+            strcmp(entry->d_name + 18, ".json") != 0)
+            continue;
+
+        memcpy(date_str, entry->d_name + 8, 10);
+        date_str[10] = '\0';
+        date = parse_date_string(date_str);
+        if (date == 0 || date >= today)
+            continue;
+
+        snprintf(source_path, sizeof(source_path), "%s/%s", dir, entry->d_name);
+        json_obj = json_object_from_file(source_path);
+        if (!json_obj)
+            continue;
+
+        snprintf(target_dir, sizeof(target_dir), "%s/global/stats", get_history_data_root_dir());
+        if (ensure_dir_exists(target_dir) != 0)
+            goto next;
+        snprintf(target_path, sizeof(target_path), "%s/%s", target_dir, entry->d_name);
+        json_string = json_object_to_json_string_ext(json_obj, JSON_C_TO_STRING_PRETTY);
+        fp = fopen(target_path, "w");
+        if (fp) {
+            fprintf(fp, "%s\n", json_string);
+            fclose(fp);
+        }
+next:
+        json_object_put(json_obj);
+    }
+
+    closedir(dp);
+}
+
+void save_current_global_traffic_backup(void)
+{
+    char file_path[512] = {0};
+    struct json_object *json_obj = NULL;
+    struct json_object *hourly_array = NULL;
+    const char *json_string;
+    FILE *fp;
+    int hour;
+    u_int32_t today = get_today_start_timestamp();
+
+    archive_stale_global_traffic_backups(today);
+
+    if (g_global_traffic_date != today || build_global_traffic_backup_path(today, file_path, sizeof(file_path)) != 0)
+        return;
+
+    json_obj = json_object_new_object();
+    hourly_array = json_object_new_array();
+    if (!json_obj || !hourly_array)
+        goto out;
+
+    json_object_object_add(json_obj, "date", json_object_new_int64(today));
+    for (hour = 0; hour < HOURS_PER_DAY; hour++) {
+        struct json_object *hour_obj = json_object_new_object();
+        struct json_object *traffic_obj = json_object_new_object();
+        json_object_object_add(hour_obj, "hour", json_object_new_int(hour));
+        json_object_object_add(traffic_obj, "up_bytes", json_object_new_int64(g_global_hourly_traffic[hour].up_bytes));
+        json_object_object_add(traffic_obj, "down_bytes", json_object_new_int64(g_global_hourly_traffic[hour].down_bytes));
+        json_object_object_add(hour_obj, "traffic", traffic_obj);
+        json_object_array_add(hourly_array, hour_obj);
+    }
+    json_object_object_add(json_obj, "hourly_traffic", hourly_array);
+    hourly_array = NULL;
+
+    json_string = json_object_to_json_string_ext(json_obj, JSON_C_TO_STRING_PRETTY);
+    fp = fopen(file_path, "w");
+    if (!fp) {
+        LOG_ERROR("Failed to save current global traffic backup: %s\n", file_path);
+        goto out;
+    }
+    fprintf(fp, "%s\n", json_string);
+    fclose(fp);
+out:
+    if (hourly_array)
+        json_object_put(hourly_array);
+    if (json_obj)
+        json_object_put(json_obj);
+}
+
+void load_current_global_traffic_backup(void)
+{
+    char file_path[512] = {0};
+    struct json_object *json_obj = NULL;
+    struct json_object *date_obj = NULL;
+    struct json_object *hourly_traffic = NULL;
+    u_int32_t today = get_today_start_timestamp();
+    int i;
+
+    archive_stale_global_traffic_backups(today);
+
+    if (build_global_traffic_backup_path(today, file_path, sizeof(file_path)) != 0)
+        return;
+
+    json_obj = json_object_from_file(file_path);
+    if (!json_obj)
+        return;
+
+    if (!json_object_object_get_ex(json_obj, "date", &date_obj) ||
+        (u_int32_t)json_object_get_int64(date_obj) != today ||
+        !json_object_object_get_ex(json_obj, "hourly_traffic", &hourly_traffic) ||
+        !json_object_is_type(hourly_traffic, json_type_array)) {
+        json_object_put(json_obj);
+        return;
+    }
+
+    memset(g_global_hourly_traffic, 0, sizeof(g_global_hourly_traffic));
+    for (i = 0; i < json_object_array_length(hourly_traffic); i++) {
+        struct json_object *hour_obj = json_object_array_get_idx(hourly_traffic, i);
+        struct json_object *traffic_obj = NULL, *value_obj = NULL;
+        int hour;
+        if (!hour_obj || !json_object_object_get_ex(hour_obj, "hour", &value_obj))
+            continue;
+        hour = json_object_get_int(value_obj);
+        if (hour < 0 || hour >= HOURS_PER_DAY)
+            continue;
+        if (!json_object_object_get_ex(hour_obj, "traffic", &traffic_obj))
+            continue;
+        if (json_object_object_get_ex(traffic_obj, "up_bytes", &value_obj))
+            g_global_hourly_traffic[hour].up_bytes = json_object_get_int64(value_obj);
+        if (json_object_object_get_ex(traffic_obj, "down_bytes", &value_obj))
+            g_global_hourly_traffic[hour].down_bytes = json_object_get_int64(value_obj);
+    }
+    g_global_traffic_date = today;
     json_object_put(json_obj);
 }
 
@@ -3717,6 +3899,8 @@ void save_daily_top_apps_stats_to_file(client_node_t *client, u_int32_t date) {
     for (i = 0; i < stat->count; i++) {
         struct json_object *app_obj = json_object_new_object();
         json_object_object_add(app_obj, "appid", json_object_new_int(stat->apps[i].appid));
+        if (!app_icon_exists_by_id(stat->apps[i].appid))
+            json_object_object_add(app_obj, "icon", json_object_new_int(0));
         json_object_object_add(app_obj, "total_time", json_object_new_int64(stat->apps[i].total_time));
         const char *app_name = get_app_name_by_id(stat->apps[i].appid);
         if (app_name) {

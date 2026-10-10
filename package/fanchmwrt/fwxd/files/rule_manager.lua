@@ -994,7 +994,7 @@ local function get_all_user_macs_for_status()
     return user_mac_list, user_mac_set
 end
 
-local function write_user_parental_control_status(appfilter_mac_set, appfilter_all_users_active, macfilter_block_set, appfilter_detail_map, appfilter_all_user_rule_details, macfilter_detail_map)
+local function write_user_parental_control_status(appfilter_mac_set, appfilter_all_users_active, macfilter_block_set, appfilter_detail_map, appfilter_all_user_rule_details, macfilter_all_user_rule_details, macfilter_detail_map)
     local final_mac_set = {}
     local _, all_mac_set = get_all_user_macs_for_status()
     local output_mac_list = {}
@@ -1002,8 +1002,13 @@ local function write_user_parental_control_status(appfilter_mac_set, appfilter_a
     local mac_block_set = macfilter_block_set or {}
     local app_detail_set = appfilter_detail_map or {}
     local app_all_user_detail_list = appfilter_all_user_rule_details or {}
+    local mac_all_user_detail_list = macfilter_all_user_rule_details or {}
     local mac_detail_set = macfilter_detail_map or {}
-    local detail_data = { users = {} }
+    local detail_data = {
+        appfilter_all_user_rules = app_all_user_detail_list,
+        macfilter_all_user_rules = mac_all_user_detail_list,
+        users = {}
+    }
 
     for mac, _ in pairs(all_mac_set) do
         final_mac_set[mac] = true
@@ -1043,12 +1048,6 @@ local function write_user_parental_control_status(appfilter_mac_set, appfilter_a
                 table.insert(app_rules, detail)
             end
         end
-        if appfilter_all_users_active then
-            for _, detail in ipairs(app_all_user_detail_list) do
-                table.insert(app_rules, detail)
-            end
-        end
-
         if #app_rules > 0 or appfilter_all_users_active or app_set[mac] then
             status = PC_STATUS_APP_LIMITED
         end
@@ -1400,9 +1399,6 @@ local function process_macfilter_rules(current_info)
                     added_count = added_count + 1
                 end
                 regular_mac_set[mac] = true
-                for _, rule_detail in ipairs(all_user_range_rule_details) do
-                    append_detail_for_mac(macfilter_detail_map, mac, rule_detail)
-                end
             end
             log(string.format("MACFilter all-user range: %d active rules, add %d users into effective mac list", #all_user_rules, added_count))
         else
@@ -2131,13 +2127,15 @@ local function main_loop()
         local appfilter_all_user_rule_details = {}
         local macfilter_block_set = {}
         local macfilter_detail_map = {}
+        local macfilter_all_user_rule_details = {}
         
         local ok, err = pcall(function()
             appfilter_effective_mac_set, appfilter_all_users_active, appfilter_detail_map, appfilter_all_user_rule_details =
                 process_appfilter_rules(current_info)
-            macfilter_block_set, macfilter_detail_map = process_macfilter_rules(current_info)
+            macfilter_block_set, macfilter_detail_map, macfilter_all_user_rule_details = process_macfilter_rules(current_info)
             macfilter_block_set = macfilter_block_set or {}
             macfilter_detail_map = macfilter_detail_map or {}
+            macfilter_all_user_rule_details = macfilter_all_user_rule_details or {}
         end)
         
         if not ok then
@@ -2151,6 +2149,7 @@ local function main_loop()
                 macfilter_block_set or {},
                 appfilter_detail_map or {},
                 appfilter_all_user_rule_details or {},
+                macfilter_all_user_rule_details or {},
                 macfilter_detail_map or {}
             )
         end)

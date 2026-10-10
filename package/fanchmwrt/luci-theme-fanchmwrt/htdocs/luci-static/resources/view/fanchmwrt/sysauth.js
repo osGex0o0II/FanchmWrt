@@ -7,8 +7,10 @@ return view.extend({
 		var form = document.querySelector('form'),
 		    btn = document.querySelector('button');
 
+		document.body.classList.add('login_page');
+
 		var dlg = ui.showModal(
-			_('Authorization Required'),
+			'FanchmWrt',
 			[].slice.call(document.querySelectorAll('section > *')),
 			'login'
 		);
@@ -24,8 +26,6 @@ return view.extend({
 
 			form.submit()
 		});
-
-		document.querySelector('input[type="password"]').focus();
 
 		return '';
 	},
