@@ -9,6 +9,7 @@
 #include <libubox/utils.h>
 #include <libubus.h>
 #include "fwx_user.h"
+#include "fwx_user_summary.h"
 #include "fwx_netlink.h"
 #include "fwx_ubus.h"
 #include "fwx_stat.h"
@@ -17,11 +18,16 @@
 #include <signal.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <json-c/json.h>
+#include <sys/stat.h>
 #include "fwx.h"
 #include <stdio.h>
 #include "fwx_utils.h"
 #include "fwx_app_filter.h"
 #include "check_main.h"
+#include "fwx_feature.h"
+#include "fwx_feature_online.h"
+#include "fwx_custom_feature.h"
 
 int current_log_level = LOG_LEVEL_WARN;
 //int current_log_level = LOG_LEVEL_INFO;
@@ -30,6 +36,7 @@ int g_fwxd_debug_mode = 0;
 #define CMD_GET_LAN_IP_FMT   "ifconfig %s | grep 'inet addr' | awk '{print $2}' | awk -F: '{print $2}'"
 #define CMD_GET_LAN_MASK_FMT "ifconfig %s | grep 'inet addr' | awk '{print $4}' | awk -F: '{print $2}'"
 #define CLIENT_BACKUP_SYNC_INTERVAL_SEC 600
+#define GLOBAL_TRAFFIC_BACKUP_SYNC_INTERVAL_SEC 300
 int g_fwx_config_chage = 1;
 int g_hnat_init = 0;
 int g_feature_update = 0;
@@ -55,6 +62,99 @@ static struct uloop_fd fwx_nl_fd = {
     .cb = fwx_netlink_handler,
 };
 
+#define FEATURE_UPGRADE_SUCCESS 200
+#define FEATURE_UPGRADE_FAILED 400
+
+static int write_feature_upgrade_status(int status)
+{
+    const char *temporary = FWX_FEATURE_UPGRADE_STATUS_PATH ".tmp";
+    FILE *fp = fopen(temporary, "w");
+
+    if (!fp)
+        return -1;
+    if (fprintf(fp, "%d", status) < 0 || fflush(fp) != 0 ||
+        fsync(fileno(fp)) != 0) {
+        fclose(fp);
+        unlink(temporary);
+        return -1;
+    }
+    if (fclose(fp) != 0 || chmod(temporary, 0644) != 0 ||
+        rename(temporary, FWX_FEATURE_UPGRADE_STATUS_PATH) != 0) {
+        unlink(temporary);
+        return -1;
+    }
+    return 0;
+}
+
+static int write_feature_info_file(void)
+{
+    const char *feature_data;
+    const char *json_text;
+    const char *temporary = FWX_FEATURE_INFO_PATH ".tmp";
+    size_t feature_len = 0;
+    size_t offset = 0;
+    char line[1024];
+    char version[64] = {0};
+    int feature_type = 0;
+    int feature_free = 0;
+    int type_seen = 0;
+    int free_seen = 0;
+    struct json_object *info_obj = NULL;
+    FILE *fp = NULL;
+    int line_ret;
+    int ret = -1;
+
+    feature_data = fwx_feature_get_data(&feature_len);
+    while (feature_data &&
+           (line_ret = fwx_feature_next_line(feature_data, feature_len, &offset,
+                                             line, sizeof(line))) != 0) {
+        if (line_ret < 0)
+            continue;
+        if (!strncmp(line, "#version ", 9)) {
+            sscanf(line, "#version %63s", version);
+        } else if (!strncmp(line, "#type ", 6)) {
+            sscanf(line, "#type %d", &feature_type);
+            if (feature_type != 0 && feature_type != 1)
+                feature_type = 0;
+            type_seen = 1;
+        } else if (!strncmp(line, "#free ", 6)) {
+            sscanf(line, "#free %d", &feature_free);
+            feature_free = feature_free ? 1 : 0;
+            free_seen = 1;
+        }
+        if (version[0] && type_seen && free_seen)
+            break;
+    }
+    info_obj = json_object_new_object();
+    if (!info_obj)
+        return -1;
+    json_object_object_add(info_obj, "version", json_object_new_string(version));
+    json_object_object_add(info_obj, "type", json_object_new_int(feature_type));
+    json_object_object_add(info_obj, "free", json_object_new_int(feature_free));
+    json_object_object_add(info_obj, "app_count", json_object_new_int(g_app_count));
+    json_object_object_add(info_obj, "format", json_object_new_string("v4.0"));
+    json_text = json_object_to_json_string_ext(info_obj, JSON_C_TO_STRING_PLAIN);
+    fp = fopen(temporary, "w");
+    if (!fp || fwrite(json_text, 1, strlen(json_text), fp) != strlen(json_text) ||
+        fflush(fp) != 0 || fsync(fileno(fp)) != 0)
+        goto out;
+    if (fclose(fp) != 0) {
+        fp = NULL;
+        goto out;
+    }
+    fp = NULL;
+    if (chmod(temporary, 0644) != 0 || rename(temporary, FWX_FEATURE_INFO_PATH) != 0)
+        goto out;
+    ret = 0;
+out:
+    if (fp)
+        fclose(fp);
+    if (ret != 0)
+        unlink(temporary);
+    json_object_put(info_obj);
+    return ret;
+}
+
 
 int fwx_nl_clean_feature(void){
     fwx_nl_msg_t msg;
@@ -63,8 +163,7 @@ int fwx_nl_clean_feature(void){
     }
     msg.action = FWX_NL_MSG_CLEAN_FEATURE;
   
-    fwx_nl_send_msg_to_kernel(fwx_nl_fd.fd,(void *)&msg, sizeof(msg));
-    return 0;
+    return fwx_nl_send_msg_to_kernel(fwx_nl_fd.fd,(void *)&msg, sizeof(msg));
 }
 
 int fwx_nl_add_feature(char *feature){
@@ -78,8 +177,8 @@ int fwx_nl_add_feature(char *feature){
     fwx_nl_msg_t *hdr = (fwx_nl_msg_t *)msg_buf;
     hdr->action = FWX_NL_MSG_ADD_FEATURE;
     strncpy(p_data, feature, strlen(feature));
-    fwx_nl_send_msg_to_kernel(fwx_nl_fd.fd,(void *)msg_buf, sizeof(fwx_nl_msg_t) + strlen(feature) + 1);
-    return 0;
+    return fwx_nl_send_msg_to_kernel(fwx_nl_fd.fd,(void *)msg_buf,
+                                     sizeof(fwx_nl_msg_t) + strlen(feature) + 1);
 }
 
 int fwx_nl_feature_load_done(void){
@@ -88,8 +187,7 @@ int fwx_nl_feature_load_done(void){
         return -1;
     }
     msg.action = FWX_NL_MSG_FEATURE_LOAD_DONE;
-    fwx_nl_send_msg_to_kernel(fwx_nl_fd.fd, (void *)&msg, sizeof(msg));
-    return 0;
+    return fwx_nl_send_msg_to_kernel(fwx_nl_fd.fd, (void *)&msg, sizeof(msg));
 }
 
 
@@ -97,18 +195,26 @@ int fwx_nl_feature_load_done(void){
 int fwx_load_feature_to_kernel(void){
 	char line_buf[MAX_FEATURE_LINE_LEN] = {0};
     int feature_count = 0;
-	FILE *fp = fopen("/tmp/feature.cfg", "r");
-	if (!fp)
-	{
-		LOG_ERROR("open file failed\n");
+	int custom_count;
+	size_t feature_len = 0;
+    size_t offset = 0;
+    const char *feature_data = fwx_feature_get_data(&feature_len);
+
+	if (!feature_data || feature_len == 0)
 		return -1;
-	}
 	if (fwx_nl_clean_feature() < 0){
         LOG_ERROR("Failed to clean feature\n");
         return -1;
     }
-	while (fgets(line_buf, sizeof(line_buf), fp))
-	{
+	while (offset < feature_len) {
+		int line_ret = fwx_feature_next_line(feature_data, feature_len, &offset,
+                                                line_buf, sizeof(line_buf));
+		if (line_ret < 0) {
+            LOG_ERROR("feature line too long\n");
+			continue;
+        }
+		if (line_ret == 0)
+			break;
 		str_trim(line_buf);
 		if (strlen(line_buf) < 8)
 			continue;
@@ -119,10 +225,18 @@ int fwx_load_feature_to_kernel(void){
             LOG_ERROR("feature line too long: %s\n", line_buf);
 			continue;
 		}
-		fwx_nl_add_feature(line_buf);
+		if (fwx_nl_add_feature(line_buf) < 0) {
+            LOG_ERROR("Failed to send feature to kernel\n");
+            return -1;
+        }
         feature_count++;
 	}
-	fclose(fp);
+    custom_count = fwx_custom_feature_send_to_kernel(fwx_nl_add_feature);
+    if (custom_count < 0) {
+        LOG_ERROR("Failed to send custom feature to kernel\n");
+        return -1;
+    }
+    feature_count += custom_count;
     if (fwx_nl_feature_load_done() < 0){
         LOG_ERROR("Failed to notify feature load done\n");
         return -1;
@@ -132,17 +246,40 @@ int fwx_load_feature_to_kernel(void){
 }
 
 int reload_feature(void){
-    system("gen_class.sh /tmp/feature.cfg");
+    char *feature_data = NULL;
+    size_t feature_len = 0;
+
+    if (fwx_feature_decrypt_file(FWX_FEATURE_BIN_PATH, &feature_data, &feature_len) < 0) {
+        LOG_ERROR("Failed to decrypt feature file\n");
+        if (fwx_feature_restore_backup() < 0) {
+            LOG_ERROR("Failed to restore feature backup\n");
+            return -1;
+        }
+        LOG_WARN("Restored feature file from backup\n");
+        if (fwx_feature_decrypt_file(FWX_FEATURE_BIN_PATH,
+                                     &feature_data, &feature_len) < 0) {
+            LOG_ERROR("Failed to decrypt restored feature file\n");
+            return -1;
+        }
+    }
+    fwx_feature_replace_data(feature_data, feature_len);
     init_app_name_table();
     init_app_class_name_table();
+    if (fwx_custom_feature_reload() < 0)
+        return -1;
+    if (fwx_custom_feature_add_app_names() < 0) {
+        LOG_ERROR("Failed to initialize custom application names\n");
+        return -1;
+    }
     if (fwx_load_feature_to_kernel() < 0){
         LOG_ERROR("Failed to load feature to kernel\n");
         return -1;
     }
+    if (write_feature_info_file() < 0)
+        LOG_ERROR("Failed to write feature info file\n");
     LOG_WARN("reload feature success\n");
     return 0;
 }
-
 
 void update_lan_ip(void){
     char ip_str[32] = {0};
@@ -233,6 +370,12 @@ void fwx_timeout_handler(struct uloop_timeout *t)
         cleanup_expired_hourly_stats();
         check_and_cleanup_history_data_by_size();
     }
+    if (count % 60 == 0) {
+        save_all_client_daily_summaries();
+    }
+    if (count % GLOBAL_TRAFFIC_BACKUP_SYNC_INTERVAL_SEC == 0) {
+        save_current_global_traffic_backup();
+    }
     if (count % CLIENT_BACKUP_SYNC_INTERVAL_SEC == 0) {
         LOG_INFO("begin save all client to files\n");
         save_all_client_backup_to_files();
@@ -274,6 +417,12 @@ void init_system_config_to_proc(void) {
         }
         update_fwx_proc_value("lan_ifname", lan_ifname);
 
+        int tcp_rst = fwx_uci_get_int_value(ctx, "fwx.global.tcp_rst");
+        if (tcp_rst != 0 && tcp_rst != 1) {
+            tcp_rst = 1;
+        }
+        update_fwx_proc_u32_value("tcp_rst", tcp_rst);
+
         int work_mode = fwx_uci_get_int_value(ctx, "fwx.network.work_mode");
         if (work_mode < 0) {
             work_mode = 0;
@@ -284,8 +433,43 @@ void init_system_config_to_proc(void) {
 }
 
 void fwx_handle_sigusr1(int sig) {
-    LOG_INFO("Received SIGUSR1 signal\n");
+    char version[64] = {0};
+    char format[32] = {0};
+    int status_code = FEATURE_UPGRADE_FAILED;
+    int process_ret;
+
+    (void)sig;
+    LOG_WARN("Received feature upgrade signal, candidate=%s\n",
+             FWX_FEATURE_CANDIDATE_PATH);
+    if (access(FWX_FEATURE_CANDIDATE_PATH, F_OK) != 0) {
+        LOG_ERROR("Feature candidate file does not exist: %s\n",
+                  FWX_FEATURE_CANDIDATE_PATH);
+        if (write_feature_upgrade_status(FEATURE_UPGRADE_FAILED) < 0)
+            LOG_ERROR("Failed to write feature upgrade status: %d\n",
+                      FEATURE_UPGRADE_FAILED);
+        return;
+    }
+    process_ret = fwx_feature_process_candidate(version, sizeof(version),
+                                                format, sizeof(format),
+                                                &status_code, NULL);
+    if (process_ret < 0) {
+        LOG_ERROR("Feature candidate processing failed, version=%s, format=%s, status=%d\n",
+                  version[0] ? version : "--", format[0] ? format : "--",
+                  status_code);
+        if (write_feature_upgrade_status(status_code) < 0)
+            LOG_ERROR("Failed to write feature upgrade status: %d\n", status_code);
+        return;
+    }
+    LOG_WARN("Feature candidate applied, target=%s, backup=%s\n",
+             FWX_FEATURE_BIN_PATH, FWX_FEATURE_BACKUP_PATH);
     g_feature_update = 1;
+    if (write_feature_upgrade_status(FEATURE_UPGRADE_SUCCESS) < 0) {
+        LOG_ERROR("Failed to write feature upgrade status: %d\n",
+                  FEATURE_UPGRADE_SUCCESS);
+        return;
+    }
+    LOG_WARN("Feature candidate processing complete, status=%d\n",
+             FEATURE_UPGRADE_SUCCESS);
 }
 
 void fwx_handle_sigusr2(int sig) {
@@ -322,25 +506,24 @@ static void parse_fwxd_args(int argc, char **argv)
     }
 }
 
-
 int main(int argc, char **argv)
 {
-    int ret = 0;
-    LOG_INFO("fwx start222");
-    printf("start...\n");
+    LOG_INFO("fwx start");
     parse_fwxd_args(argc, argv);
-    LOG_WARN("fwxd debug mode: %d\n", g_fwxd_debug_mode);
     g_feature_update = 1;
     uloop_init();
     signal(SIGUSR1, fwx_handle_sigusr1);	
     signal(SIGUSR2, fwx_handle_sigusr2);
-    signal(SIGCHLD, SIG_IGN);
     init_client_list();
     load_app_valid_time_config();
     init_client_visit_db();
     load_client_backup_from_files();
+    load_current_global_traffic_backup();
     init_system_config_to_proc();
     init_fwx_capability();
+
+    if (fwx_feature_online_init() < 0)
+        LOG_ERROR("Failed to initialize online feature update\n");
 
     if (fwx_ubus_init() < 0)
     {
@@ -357,7 +540,10 @@ int main(int argc, char **argv)
     uloop_timeout_set(&fwx_tm, 5000);
     uloop_timeout_add(&fwx_tm);
     uloop_run();
+    save_all_client_daily_summaries();
+    save_current_global_traffic_backup();
     stop_check_thread();
+    fwx_feature_online_cleanup();
     uloop_done();
     return 0;
 }

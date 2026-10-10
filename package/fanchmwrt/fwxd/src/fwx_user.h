@@ -163,6 +163,7 @@ typedef struct client_node
     daily_hourly_stat_t daily_stats; 
     
     daily_top_apps_stat_t daily_top_apps_stats; 
+    struct json_object *daily_summary;
     struct list_head client; 
 
 } client_node_t;
@@ -236,6 +237,8 @@ void get_global_daily_app_type_stats(unsigned long long *type_time_array);
 void get_global_hourly_app_type_stats(unsigned long long *type_time_array);
 struct json_object *fwx_api_get_global_app_type_stats(struct json_object *req_obj);
 void save_global_traffic_stats_to_file(u_int32_t date);
+void save_current_global_traffic_backup(void);
+void load_current_global_traffic_backup(void);
 void get_global_traffic_stats(traffic_stat_t *traffic_array);
 struct json_object *fwx_api_get_global_traffic_stats(struct json_object *req_obj);
 void reset_online_session_stat(client_node_t *client, u_int32_t start_time);

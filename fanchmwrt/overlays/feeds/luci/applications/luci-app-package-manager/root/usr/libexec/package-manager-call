@@ -41,10 +41,10 @@ case "$action" in
 						action="update --allow-untrusted"
 					;;
 					upgrade)
-						action="upgrade"
+						action="upgrade --allow-untrusted"
 					;;
 					remove)
-						action="del"
+						action="del --allow-untrusted"
 					;;
 				esac
 			fi

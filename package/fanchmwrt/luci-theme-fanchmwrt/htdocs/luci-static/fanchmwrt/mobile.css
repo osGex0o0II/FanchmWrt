@@ -1,139 +1,66 @@
-header h3 a, header .brand {
-	display:none !important;
-}
-
 @media screen and (max-width: 768px) {
-	header {
-		display: flex !important;
-		flex-direction: row;
-		align-items: center;
-		padding: 0 5px !important;
-	}
-	
-	header .nav {
-		flex: 3 3 80%;
-		margin: 2px 5px 2px 0;
-		display: flex !important;
-		flex-wrap: wrap;
-		justify-content: flex-start;
-	}
-
-	header .nav > li {
-		display: inline-block;
-		margin: 0 2px;
-	}
-
-	header .nav a {
-		padding: 2px 6px;
-		font-size: 12px;
-	}
-
-	header .pull-right {
-		flex: 0 1 20%;
-		display: flex;
-		flex-direction: column;
-		padding: 0;
-		justify-content: space-around;
-		margin: .2em 5px .2em auto;
-	}
-
-	.menu-dropdown, .dropdown-menu {
-		top: 23px;
-	}
-}
-
-@media screen and (max-width: 768px) {
-	body {
-		min-width: 800px !important;
-		overflow-x: auto !important; 
-	}
-	
 	.main-layout {
-		min-width: 800px !important;
-		flex-direction: column !important;
+		flex-direction: column;
+		gap: 8px;
+		padding: 0 8px;
 	}
-	
-	.container {
-		min-width: 800px !important;
-		order: 2 !important; 
-		padding: 10px !important;
-		width: 100% !important;
+
+	#maincontent.container {
+		width: 100%;
+		min-width: 0;
+		padding: 12px !important;
 	}
-	
+
+	.top-navbar-content {
+		gap: 8px;
+		padding: 4px;
+	}
+
+	.top-navbar-title {
+		font-size: 18px;
+	}
+
+	.top-navbar-right {
+		gap: 4px;
+	}
+
+	.mobile-menu-toggle {
+		display: block;
+		flex-shrink: 0;
+		min-width: 44px;
+		min-height: 44px;
+		padding: 4px;
+	}
+
+	.top-user-button {
+		width: 44px;
+		height: 44px;
+	}
+
 	.sidebar-nav {
-		width: 100% !important;
-		height: auto !important;
-		order: 1 !important;
-		position: relative !important;
-		background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%) !important;
-		border: 1px solid rgba(255, 255, 255, 0.2) !important;
-		border-radius: 0 !important;
-		margin: 0 !important;
-		padding: 10px 0 !important;
-		box-shadow: none !important;
-		overflow: visible !important;
-		min-width: 800px !important;
+		display: none;
+		flex: none;
+		width: 100%;
 	}
-	
-	.sidebar-nav .nav {
-		display: block !important;
-		width: 100% !important;
-		float: none !important;
-		margin: 0 !important;
-		padding: 0 !important;
+
+	.sidebar-nav.mobile-open {
+		display: block;
 	}
-	
-	.sidebar-nav .nav > li {
-		width: 100% !important;
-		margin: 0 !important;
-		padding: 0 !important;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-		border-radius: 0 !important;
-		display: block !important;
-		float: none !important;
+
+	.breadcrumb-container .breadcrumb {
+		flex-wrap: wrap;
+		overflow-wrap: anywhere;
 	}
-	
-	.sidebar-nav .nav > li > a {
-		padding: 12px 20px !important;
-		display: block !important;
-		width: 100% !important;
-		box-sizing: border-box !important;
-		font-size: 14px !important;
+
+	.tabs, .cbi-tabmenu {
+		display: flex;
+		flex-wrap: wrap;
 	}
-	
-	.sidebar-nav .nav .dropdown-menu {
-		position: static !important;
-		display: none !important;
-		width: 100% !important;
-		box-shadow: none !important;
-		background: rgba(0, 0, 0, 0.2) !important;
-		padding-left: 20px !important;
+
+	textarea, .cbi-input-text, .cbi-input-select {
+		max-width: 100%;
 	}
-	
-	.sidebar-nav .nav .dropdown.open .dropdown-menu {
-		display: block !important;
-	}
-	
-	.top-navbar {
-		padding: 8px 0 !important;
-		height: auto !important;
-		min-height: 40px !important;
-	}
-	
-	.top-navbar .nav-tabs {
-		padding-left: 10px !important;
-		flex-wrap: wrap !important;
-	}
-	
-	.top-navbar .nav-tabs > li {
-		margin: 2px 5px !important;
-	}
-	
-	.top-navbar .nav-tabs > li > a {
-		padding: 6px 12px !important;
-		font-size: 13px !important;
-	}
-	
+
 	.modal {
 		margin: 1.5em auto;
 	}
@@ -344,7 +271,8 @@ header h3 a, header .brand {
 	.cbi-dropdown > ul > li input[type="text"],
 	.cbi-value-field .control-group {
 		width: 100%;
-		height: 30px;
+		min-height: 30px;
+		height: auto;
 	}
 
 	input.cbi-input-password {
@@ -377,48 +305,6 @@ header h3 a, header .brand {
 
 	[data-page="admin-status-overview"] .td[width="33%"] {
 		flex-basis: 33%;
-	}
-
-	header .pull-right .label {
-		white-space: normal;
-		display: inline-block;
-		text-align: center;
-		line-height: 12px;
-		margin: 1px 0;
-	}
-
-	header > .fill {
-		padding: 1px;
-	}
-
-	header > .fill > .container {
-		display: flex;
-		flex-direction: row;
-	}
-
-	header .nav {
-		flex: 3 3 80%;
-		margin: 2px 5px 2px 0;
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-start;
-	}
-
-	header .nav a {
-		padding: 2px 6px;
-	}
-
-	header .pull-right {
-		flex: 0 1 20%;
-		display: flex;
-		flex-direction: column;
-		padding: 0;
-		justify-content: space-around;
-		margin: .2em 5px .2em auto;
-	}
-
-	.menu-dropdown, .dropdown-menu {
-		top: 23px;
 	}
 
 	.cbi-optionals,
@@ -477,7 +363,7 @@ header h3 a, header .brand {
 	}
 }
 
-@media screen and (max-device-width: 375px) {
+@media screen and (max-width: 375px) {
 	.cbi-page-actions {
 		display: flex;
 		justify-content: space-between;

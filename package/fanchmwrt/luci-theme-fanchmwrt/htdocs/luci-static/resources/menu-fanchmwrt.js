@@ -21,246 +21,217 @@ return baseclass.extend({
 	defaultIcon: 'default',
 	__init__() {
 		ui.menu.load().then(L.bind(this.render, this));
-		window.addEventListener('resize', L.bind(this.handleResize, this));
-	},
-	
-	isMobileDevice() {
-		const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-		const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
-		const isMobileUA = mobileRegex.test(userAgent);
-		
-		const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-		const isMobileWidth = width <= 768;
-		
-		const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-		
-		const isHighDPR = window.devicePixelRatio && window.devicePixelRatio > 1;
-
-		const isMobile = isMobileUA && isMobileWidth;
-		
-		const isMobileLandscape = isMobileUA && width > 768 && width <= 1024;
-		
-		const result = isMobile || isMobileLandscape;
-		
-
-		return result;
-	},
-	
-	isWideScreen() {
-		return !this.isMobileDevice();
-	},
-	
-	handleResize() {
-		clearTimeout(this.resizeTimer);
-		this.resizeTimer = setTimeout(() => {
-			const isWide = this.isWideScreen();
-			const sidebarNav = document.querySelector('.sidebar-nav');
-			
-			if (isWide) {
-				if (sidebarNav) {
-					sidebarNav.style.display = '';
-				}
-			} else {
-				if (sidebarNav) {
-					sidebarNav.style.display = 'none';
-				}
-			}
-		}, 200);
-	},
-
-	getMenuIcon(menuName) {
-		return this.menuIcons[menuName] || this.defaultIcon;
-	},
-
-	generateMenuIconClass(menuName) {
-		const iconName = this.getMenuIcon(menuName);
-		return `menu-icon-${iconName}`;
 	},
 
 	render(tree) {
+		this.renderModeMenu(tree);
+		this.renderCategoryNav();
+		this.renderBreadcrumb(tree);
+		this.setup_mobile_menu();
+		this.setup_content_scrollbar();
+		const category = L.env.dispatchpath[1]
+			? (this.getMenuCategory(L.env.dispatchpath[1]) === 'menu-item-basic' ? 'basic' : 'advanced')
+			: localStorage.getItem('luci-menu-category') || 'basic';
+		this.switchCategory(category);
+
 		let node = tree;
 		let url = '';
-		this.renderModeMenu(tree);
-		this.renderCategoryNav(); 
-		this.renderBreadcrumb(tree);
-
-		let currentLevel = 0;
-		if (L.env.dispatchpath.length >= 3) {
-			for (var i = 0; i < 3 && node; i++) {
-				node = node.children[L.env.dispatchpath[i]];
-				url = url + (url ? '/' : '') + L.env.dispatchpath[i];
-			}
-
-			currentLevel = 1;
-
-			if (node)
-				this.renderTabMenu(node, url, currentLevel);
+		for (let i = 0; i < 3 && node && L.env.dispatchpath.length >= 3; i++) {
+			node = node.children && node.children[L.env.dispatchpath[i]];
+			url += (url ? '/' : '') + L.env.dispatchpath[i];
 		}
+		if (node && L.env.dispatchpath.length >= 3)
+			this.renderTabMenu(node, url, 0);
+	},
 
-		const isWide = this.isWideScreen();
-		const menuSelector = isWide ? '#topmenu' : '#topmenu-mobile';
-		const menuContainer = document.querySelector(menuSelector);
-		const hasRenderedMenu = !!(menuContainer && menuContainer.children.length > 0);
-		if (!hasRenderedMenu) {
-			if (isWide) {
-				this.renderMainMenu(node, url, currentLevel);
-			} else {
-				this.renderMobileMenu(node, url, currentLevel);
+	setup_content_scrollbar() {
+		const content = document.getElementById('maincontent');
+		if (!content)
+			return;
+		let hide_timer;
+		const show_scrollbar = () => {
+			content.classList.add('scrollbar_active');
+			clearTimeout(hide_timer);
+			hide_timer = setTimeout(() => content.classList.remove('scrollbar_active'), 1000);
+		};
+		content.addEventListener('scroll', show_scrollbar, { passive: true });
+		content.addEventListener('wheel', show_scrollbar, { passive: true });
+	},
+
+	setup_mobile_menu() {
+		const toggle = document.querySelector('.mobile-menu-toggle');
+		const sidebar = document.querySelector('.sidebar-nav');
+		const media_query = window.matchMedia('(max-width: 768px)');
+		const set_open = (open) => {
+			sidebar.classList.toggle('mobile-open', open);
+			toggle.setAttribute('aria-expanded', String(open));
+		};
+		toggle.addEventListener('click', () => set_open(!sidebar.classList.contains('mobile-open')));
+		document.addEventListener('click', (event) => {
+			if (!sidebar.contains(event.target) && !toggle.contains(event.target))
+				set_open(false);
+		});
+		document.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape' && sidebar.classList.contains('mobile-open')) {
+				set_open(false);
+				toggle.focus();
 			}
-		}
-		
-		setTimeout(() => {
-			this.handleResize();
-		}, 100);
+		});
+		media_query.addEventListener('change', () => set_open(false));
 	},
 
 	renderCategoryNav() {
 		const savedCategory = localStorage.getItem('luci-menu-category') || 'basic';
 		
-		const isWide = this.isWideScreen();
+		const titleText = (
+			(L && L.env && L.env.hostname) ||
+			(document.querySelector('header a.brand') && document.querySelector('header a.brand').textContent || '').trim() ||
+			'FanchmWrt'
+		);
+		const brandElement = E('a', { 'class': 'top-navbar-brand', 'href': L.url('admin', 'fwx_dashboard') }, [
+			E('span', { 'class': 'top-navbar-title' }, [titleText])
+		]);
+		brandElement.addEventListener('click', function() {
+			localStorage.setItem('luci-menu-category', 'basic');
+		});
+		document.querySelector('.sidebar_brand').addEventListener('click', function() {
+			localStorage.setItem('luci-menu-category', 'basic');
+		});
 		
-		if (isWide) {
-			const titleText = (
-				(L && L.env && L.env.hostname) ||
-				(document.querySelector('header a.brand') && document.querySelector('header a.brand').textContent || '').trim() ||
-				'FanchmWrt'
-			);
-			const brandElement = E('a', { 'class': 'top-navbar-brand', 'href': L.url('admin', 'fwx_dashboard') }, [
-				E('span', { 'class': 'top-navbar-title' }, [titleText])
-			]);
-			brandElement.addEventListener('click', function() {
-				localStorage.setItem('luci-menu-category', 'basic');
-			});
-			
-			const createModeItem = (category, title, href) => {
-				const item = E('li', {
-					'class': 'mode-item' + (savedCategory === category ? ' active' : ''),
-					'data-category': category
-				}, [
-					E('a', { 'href': href }, [
-						E('span', { 'class': 'mode-check' }, [
-							E('img', { 'src': '/luci-static/fanchmwrt/icons/fwx_check.png', 'alt': '' })
-						]),
-						E('span', { 'class': 'mode-title' }, [_(title)])
-					])
-				]);
-
-				item.querySelector('a').addEventListener('click', function() {
-					localStorage.setItem('luci-menu-category', category);
-				});
-
-				return item;
-			};
-
-			const modeMenu = E('div', { 'class': 'top-user-menu top-mode-menu' }, [
-				E('button', {
-					'class': 'top-user-button top-more-button',
-					'type': 'button',
-					'aria-label': _('Mode menu')
-				}, [
-					E('span', { 'class': 'top-more-icon' }, ['⋮'])
-				]),
-				E('ul', { 'class': 'top-user-dropdown top-mode-dropdown' }, [
-					createModeItem('basic', 'Normal Mode', L.url('admin', 'fwx_dashboard')),
-					createModeItem('advanced', 'Advanced Mode', L.url('admin', 'status', 'overview'))
+		const createModeItem = (category, title, href) => {
+			const item = E('li', {
+				'class': 'mode-item' + (savedCategory === category ? ' active' : ''),
+				'data-category': category
+			}, [
+				E('a', { 'href': href }, [
+					E('span', { 'class': 'mode-check', 'aria-hidden': 'true' }),
+					E('span', { 'class': 'mode-title' }, [_(title)])
 				])
 			]);
 
-			const userMenu = E('div', { 'class': 'top-user-menu top-profile-menu' }, [
-				E('button', {
-					'class': 'top-user-button',
-					'type': 'button',
-					'aria-label': _('User menu')
-				}, [
-					E('span', { 'class': 'top-user-icon', 'aria-hidden': 'true' })
+			item.querySelector('a').addEventListener('click', function() {
+				localStorage.setItem('luci-menu-category', category);
+			});
+
+			return item;
+		};
+
+		const modeMenu = E('div', { 'class': 'top-user-menu top-mode-menu' }, [
+			E('button', {
+				'class': 'top-user-button top-more-button',
+				'type': 'button',
+				'aria-label': _('Mode menu')
+			}, [
+				E('span', { 'class': 'mode_button_label' }, [savedCategory === 'advanced' ? _('Advanced Mode') : _('Normal Mode')]),
+				E('span', { 'class': 'top-more-icon' }, ['⋮'])
+			]),
+			E('ul', { 'class': 'top-user-dropdown top-mode-dropdown' }, [
+				createModeItem('basic', 'Normal Mode', L.url('admin', 'fwx_dashboard')),
+				createModeItem('advanced', 'Advanced Mode', L.url('admin', 'status', 'overview'))
+			])
+		]);
+
+		const userMenu = E('div', { 'class': 'top-user-menu top-profile-menu' }, [
+			E('button', {
+				'class': 'top-user-button',
+				'type': 'button',
+				'aria-label': _('User menu')
+			}, [
+				E('span', { 'class': 'top-user-icon', 'aria-hidden': 'true' })
+			]),
+			E('ul', { 'class': 'top-user-dropdown top-profile-dropdown' }, [
+				E('li', { 'class': 'system-item' }, [
+					E('a', { 'href': L.url('admin', 'system', 'reboot') }, [_('Device Reboot')])
 				]),
-				E('ul', { 'class': 'top-user-dropdown top-profile-dropdown' }, [
-					E('li', { 'class': 'logout-item' }, [
-						E('a', { 'href': '#' }, [_('Logout')])
-					])
+				E('li', { 'class': 'system-item' }, [
+					E('a', { 'href': L.url('admin', 'system', 'flash') }, [_('System Upgrade')])
+				]),
+				E('li', { 'class': 'system-item' }, [
+					E('a', { 'href': L.url('admin', 'system', 'admin') }, [_('Change Password')])
+				]),
+				E('li', { 'class': 'logout-item' }, [
+					E('a', { 'href': '#' }, [_('Logout')])
 				])
-			]);
+			])
+		]);
 
-			const closeTopMenus = () => {
-				userMenu.classList.remove('open');
-				modeMenu.classList.remove('open');
-			};
+		const closeTopMenus = () => {
+			userMenu.classList.remove('open');
+			modeMenu.classList.remove('open');
+		};
 
-			const userBtn = userMenu.querySelector('.top-user-button');
-			userBtn.addEventListener('click', function(ev) {
-				ev.preventDefault();
-				ev.stopPropagation();
-				const shouldOpen = !userMenu.classList.contains('open');
-				closeTopMenus();
-				if (shouldOpen) {
-					userMenu.classList.add('open');
-				}
-			});
-
-			const modeBtn = modeMenu.querySelector('.top-more-button');
-			modeBtn.addEventListener('click', function(ev) {
-				ev.preventDefault();
-				ev.stopPropagation();
-				const shouldOpen = !modeMenu.classList.contains('open');
-				closeTopMenus();
-				if (shouldOpen) {
-					modeMenu.classList.add('open');
-				}
-			});
-
-			const logoutLink = userMenu.querySelector('.logout-item a');
-			logoutLink.addEventListener('click', function(ev) {
-				ev.preventDefault();
-				ev.stopPropagation();
-				closeTopMenus();
-				window.dispatchEvent(new CustomEvent('logout', {
-					detail: { source: 'top-profile-menu' }
-				}));
-				window.location.href = L.url('admin', 'logout');
-			});
-
-			document.addEventListener('click', function(ev) {
-				if (!userMenu.contains(ev.target) && !modeMenu.contains(ev.target)) {
-					closeTopMenus();
-				}
-			});
-
-			document.addEventListener('keydown', function(ev) {
-				if (ev.key === 'Escape') {
-					closeTopMenus();
-				}
-			});
-
-			const topNavbarContent = E('div', { 'class': 'top-navbar-content' }, [
-				brandElement,
-				E('div', { 'class': 'top-navbar-right' }, [userMenu, modeMenu])
-			]);
-			const topNavbar = E('div', { 'class': 'top-navbar' }, [topNavbarContent]);
-
-		const body = document.body;
-			const existingNavbar = document.querySelector('.top-navbar');
-			if (existingNavbar) {
-				existingNavbar.remove();
+		const userBtn = userMenu.querySelector('.top-user-button');
+		userBtn.addEventListener('click', function(ev) {
+			ev.preventDefault();
+			ev.stopPropagation();
+			const shouldOpen = !userMenu.classList.contains('open');
+			closeTopMenus();
+			if (shouldOpen) {
+				userMenu.classList.add('open');
 			}
-		if (body.firstChild) {
-			body.insertBefore(topNavbar, body.firstChild);
-		} else {
-			body.appendChild(topNavbar);
-		}
-		
-		setTimeout(() => {
-			this.switchCategory(savedCategory);
-		}, 100);
-		}
+		});
+
+		const modeBtn = modeMenu.querySelector('.top-more-button');
+		modeBtn.addEventListener('click', function(ev) {
+			ev.preventDefault();
+			ev.stopPropagation();
+			const shouldOpen = !modeMenu.classList.contains('open');
+			closeTopMenus();
+			if (shouldOpen) {
+				modeMenu.classList.add('open');
+			}
+		});
+
+		userMenu.querySelectorAll('.system-item a').forEach((link) => {
+			link.addEventListener('click', function() {
+				localStorage.setItem('luci-menu-category', 'advanced');
+				closeTopMenus();
+			});
+		});
+
+		const logoutLink = userMenu.querySelector('.logout-item a');
+		logoutLink.addEventListener('click', function(ev) {
+			ev.preventDefault();
+			ev.stopPropagation();
+			closeTopMenus();
+			window.dispatchEvent(new CustomEvent('logout', {
+				detail: { source: 'top-profile-menu' }
+			}));
+			window.location.href = L.url('admin', 'logout');
+		});
+
+		document.addEventListener('click', function(ev) {
+			if (!userMenu.contains(ev.target) && !modeMenu.contains(ev.target)) {
+				closeTopMenus();
+			}
+		});
+
+		document.addEventListener('keydown', function(ev) {
+			if (ev.key === 'Escape') {
+				closeTopMenus();
+			}
+		});
+
+		const topNavbarContent = E('div', { 'class': 'top-navbar-content' }, [
+			E('button', {
+				'class': 'mobile-menu-toggle', 'type': 'button',
+				'aria-label': _('Menu'), 'aria-controls': 'theme-sidebar',
+				'aria-expanded': 'false'
+			}, ['☰']),
+			brandElement,
+			E('div', { 'class': 'top_navbar_context' }, [document.title]),
+			E('div', { 'class': 'top-navbar-right' }, [userMenu, modeMenu])
+		]);
+		const topNavbar = E('div', { 'class': 'top-navbar' }, [topNavbarContent]);
+
+		const existing_navbar = document.querySelector('.top-navbar');
+		if (existing_navbar)
+			existing_navbar.remove();
+		document.body.insertBefore(topNavbar, document.body.firstChild);
 	},
 	
 
 	renderBreadcrumb(tree) {
-		if (L.env.dispatchpath && L.env.dispatchpath.length >= 2 &&
-			L.env.dispatchpath[0] === 'admin' && L.env.dispatchpath[1] === 'dashboard') {
-			return;
-		}
-
 		if (!L.env.dispatchpath || L.env.dispatchpath.length === 0) {
 			return;
 		}
@@ -278,8 +249,8 @@ return baseclass.extend({
 				
 				if (i === 0 && pathSegment === 'admin') {
 					const homeItem = E('li', { 'class': 'home-item' }, [
-						E('a', { 'href': '/cgi-bin/luci/admin/fwx_dashboard', 'title': _('Home') }, [
-							E('span', { 'class': 'home-icon' }, ['🏠'])
+						E('a', { 'href': L.url('admin', 'fwx_dashboard'), 'title': _('Home'), 'aria-label': _('Home') }, [
+							E('span', { 'class': 'home-icon', 'aria-hidden': 'true' }, ['🏠'])
 						])
 					]);
 					breadcrumbItems.push(homeItem);
@@ -300,6 +271,12 @@ return baseclass.extend({
 		const breadcrumbContainer = E('div', { 'class': 'breadcrumb-container' }, [
 			E('ol', { 'class': 'breadcrumb' }, breadcrumbItems)
 		]);
+		const navbar_context = document.querySelector('.top_navbar_context');
+		if (navbar_context) {
+			const navbar_breadcrumb = breadcrumbContainer.firstElementChild.cloneNode(true);
+			navbar_breadcrumb.lastElementChild.setAttribute('aria-current', 'page');
+			navbar_context.replaceChildren(navbar_breadcrumb);
+		}
 
 		const mainContent = document.querySelector('#maincontent') || document.querySelector('.main');
 		if (mainContent) {
@@ -313,98 +290,17 @@ return baseclass.extend({
 	},
 
 	switchCategory(category) {
-		
-		const isWide = this.isWideScreen();
-		if (!isWide) {
-			return;
-		}
-		
-		const navTabs = document.querySelector('.top-navbar .nav-tabs');
-		if (navTabs) {
-			const tabs = navTabs.querySelectorAll('li');
-			tabs.forEach(li => {
-			li.classList.remove('active');
+		const mode_label = document.querySelector('.mode_button_label');
+		if (mode_label)
+			mode_label.textContent = category === 'advanced' ? _('Advanced Mode') : _('Normal Mode');
+		document.querySelectorAll('.top-user-dropdown .mode-item').forEach((item) => {
+			item.classList.toggle('active', item.getAttribute('data-category') === category);
 		});
-			const activeTab = navTabs.querySelector(`li[data-category="${category}"]`);
-		if (activeTab) {
-			activeTab.classList.add('active');
-		}
-		}
-
-		const modeItems = document.querySelectorAll('.top-user-dropdown .mode-item');
-		modeItems.forEach((item) => {
-			const isActive = item.getAttribute('data-category') === category;
-			item.classList.toggle('active', isActive);
+		document.querySelectorAll('#topmenu > li').forEach((item) => {
+			item.hidden = !item.classList.contains('menu-item-' + category);
 		});
-
-		const menuContainer = document.querySelector('#topmenu');
-		
-		if (menuContainer) {
-			const menuItems = Array.from(menuContainer.children).filter(child => child.tagName === 'LI');
-			menuItems.forEach(li => {
-			if (category === 'basic') {
-				if (li.classList.contains('menu-item-basic')) {
-					li.style.display = 'block';
-				} else if (li.classList.contains('menu-item-advanced')) {
-					li.style.display = 'none';
-				}
-			} else if (category === 'advanced') {
-				if (li.classList.contains('menu-item-basic')) {
-					li.style.display = 'none';
-				} else if (li.classList.contains('menu-item-advanced')) {
-					li.style.display = 'block';
-				}
-			}
-		});
-		}
-		
-		this.currentCategory = category;
 		localStorage.setItem('luci-menu-category', category);
 	},
-
-	isAlreadyRendered(tree, level, parentName) {
-
-		
-		const treeName = tree.name;
-		
-
-		if (level === 1 && parentName) {
-			const existingSubmenus = document.querySelectorAll('#topmenu .dropdown-menu a');
-			for (let link of existingSubmenus) {
-				const href = link.getAttribute('href');
-				if (href) {
-
-					const pathMatch = href.match(/\/admin\/([^\/\?#]+)\/([^\/\?#]+)/);
-					if (pathMatch) {
-						const existingParentMenu = pathMatch[1];
-						const existingChildMenu = pathMatch[2];
-		
-						if (existingParentMenu === parentName && existingChildMenu === treeName) {
-							return true;
-						}
-					}
-				}
-			}
-		}
-
-		if (L.env.dispatchpath && L.env.dispatchpath.length > 0) {
-			let treeIndex = -1;
-			for (let i = 0; i < L.env.dispatchpath.length; i++) {
-				if (L.env.dispatchpath[i] === treeName) {
-					treeIndex = i;
-					break;
-				}
-			}
-
-			if (treeIndex > 2) {
-				return true;
-			}
-		}
-		
-		return false;
-	},
-
-
 
 	getMenuCategory(menuName) {
 		const normalizedName = (menuName || '').toLowerCase();
@@ -448,332 +344,57 @@ return baseclass.extend({
 
 	renderMainMenu(tree, url, level) {
 		level = level || 0;
-
-		const isWide = this.isWideScreen();
-		let ul;
-		
-		if (level === 0) {
-			if (isWide) {
-				ul = document.querySelector('#topmenu');
-			} else {
-				ul = document.querySelector('#topmenu-mobile');
-				if (!ul) {
-					const topNavbar = document.querySelector('.top-navbar');
-					if (topNavbar) {
-						const topNavbarContent = topNavbar.querySelector('.top-navbar-content');
-						if (topNavbarContent) {
-							ul = topNavbarContent.querySelector('#topmenu-mobile');
-							if (!ul) {
-								ul = E('ul', { 'id': 'topmenu-mobile', 'class': 'nav navbar-nav' });
-								topNavbarContent.appendChild(ul);
-							}
-						}
-					}
-				}
-				if (!ul) {
-					ul = document.querySelector('#topmenu');
-				}
-			}
-		} else {
-			ul = E('ul', { 'class': 'dropdown-menu' });
-		}
-		
-		const children = ui.menu.getChildren(tree);
-
-		if (children.length == 0 || level > 1)
-			return E([]);
-
-		const parentName = (level === 1) ? tree.name : null;
-		if (this.isAlreadyRendered(tree, level, parentName)) {
-			return E([]);
-		}
-
-
-		children.forEach(child => {
-
+		const ul = level === 0 ? document.querySelector('#topmenu') : E('ul', { 'class': 'dropdown-menu' });
+		if (level > 1)
+			return ul;
+		ui.menu.getChildren(tree).forEach((child) => {
 			const submenu = this.renderMainMenu(child, url + '/' + child.name, level + 1);
-			const subclass = (level === 0 && submenu.firstElementChild) ? 'dropdown' : '';
-			const linkclass = (level === 0 && submenu.firstElementChild) ? 'menu' : '';
-			const linkurl = submenu.firstElementChild ? '#' : L.url(url, child.name);
-
-			const categoryClass = (level === 0) ? this.getMenuCategory(child.name) : '';
-			const classParts = [];
-			if (subclass) classParts.push(subclass);
-			if (categoryClass) classParts.push(categoryClass);
-			const fullClass = classParts.join(' ');
-
-			const iconClass = level === 0 ? this.generateMenuIconClass(child.name) : '';
-			const finalLinkClass = linkclass + (iconClass ? ' ' + iconClass : '');
-			
-			const li = E('li', { 'class': fullClass }, [
-				E('a', { 'class': finalLinkClass, 'href': linkurl }, [_(child.title)]),
-				submenu
-			]);
-
-			if (level === 0 && submenu.firstElementChild) {
-				const isActive = ((L.env.dispatchpath[1] == child.name) && (L.env.dispatchpath[0] == tree.name));
-				if (isActive) {
-					li.classList.add('open');
-				}
+			const has_submenu = level === 0 && submenu.children.length > 0;
+			const is_active = L.env.dispatchpath[level + 1] === child.name && L.env.dispatchpath[level] === tree.name;
+			const classes = level === 0 ? [this.getMenuCategory(child.name)] : [];
+			if (has_submenu) classes.push('dropdown');
+			if (is_active) {
+				classes.push(has_submenu ? 'current_group' : 'active');
+				if (has_submenu) classes.push('open');
 			}
-			
-			if (level === 0 && !submenu.firstElementChild) {
-				const isActive = ((L.env.dispatchpath[1] == child.name) && (L.env.dispatchpath[0] == tree.name));
-				if (isActive) {
-					li.classList.add('active');
-					const topLink = li.querySelector('a');
-					if (topLink) {
-						topLink.classList.add('active');
-					}
-				}
-			}
-
-		
-			if (level === 1) {
-				const isActive = ((L.env.dispatchpath[2] == child.name) && (L.env.dispatchpath[1] == tree.name));
-				if (isActive) {
-					li.classList.add('active');
-		
-				}
-			}
-
-
-			if (level === 0 && submenu.firstElementChild) {
-				const menuLink = li.querySelector('a.menu');
-				menuLink.addEventListener('click', function(e) {
-					e.preventDefault();
-					e.stopPropagation();
-					const dropdown = li;
-					const isOpen = dropdown.classList.contains('open');
-										
-	
-					const menuSelector = isWide ? '#topmenu' : '#topmenu-mobile';
-					document.querySelectorAll(menuSelector + ' .dropdown.open').forEach(item => {
-						if (item !== dropdown) {
-							item.classList.remove('open');
-						}
+			const link = E('a', {
+				'class': (has_submenu ? 'menu ' : '') + (level === 0 ? 'menu-icon-' + (this.menuIcons[child.name] || this.defaultIcon) : ''),
+				'href': has_submenu ? '#' : L.url(url, child.name)
+			}, [_(child.title)]);
+			const li = E('li', { 'class': classes.join(' ') }, has_submenu ? [link, submenu] : [link]);
+			if (has_submenu) {
+				link.setAttribute('aria-expanded', String(is_active));
+				link.addEventListener('click', (event) => {
+					event.preventDefault();
+					const open = !li.classList.contains('open');
+					ul.querySelectorAll(':scope > .dropdown.open').forEach((item) => {
+						item.classList.remove('open');
+						item.querySelector('a.menu').setAttribute('aria-expanded', 'false');
 					});
-					
-
-					if (isOpen) {
-						dropdown.classList.remove('open');
-	
-					} else {
-						dropdown.classList.add('open');
-					}
+					li.classList.toggle('open', open);
+					link.setAttribute('aria-expanded', String(open));
 				});
+			} else if (is_active) {
+				link.setAttribute('aria-current', 'page');
 			}
-
-
-			if (level === 1) {
-				const submenuLink = li.querySelector('a');
-				if (submenuLink) {
-					submenuLink.addEventListener('click', function(e) {
-						e.stopPropagation();
-	
-						if (!this.isWideScreen()) {
-							this.hideMobileMenu();
-						}
-					}.bind(this));
-				}
-			}
-			
-
-			if (level === 0 && !submenu.firstElementChild) {
-				const menuLink = li.querySelector('a');
-				if (menuLink) {
-					menuLink.addEventListener('click', function(e) {
-
-						if (!this.isWideScreen()) {
-							this.hideMobileMenu();
-						}
-					}.bind(this));
-				}
-			}
-
 			ul.appendChild(li);
 		});
-
-		ul.style.display = '';
-
-		return ul;
-	},
-
-	renderMobileMenu(tree, url, level) {
-		level = level || 0;
-		
-		let ul;
-		
-		if (level === 0) {
-	
-			ul = document.querySelector('#topmenu-mobile');
-			if (!ul) {
-
-				console.error('topmenu-mobile not found in header!');
-				return E([]);
-			}
-		} else {
-
-			ul = E('ul', { 'class': 'dropdown-menu' });
-		}
-		
-		const children = ui.menu.getChildren(tree);
-
-		if (children.length == 0 || level > 1)
-			return E([]);
-		
-
-		const parentName = (level === 1) ? tree.name : null;
-		if (this.isAlreadyRendered(tree, level, parentName)) {
-			return E([]);
-		}
-
-		children.forEach(child => {
-
-
-			const submenu = this.renderMobileMenu(child, url + '/' + child.name, level + 1);
-			const subclass = (level === 0 && submenu.firstElementChild) ? 'dropdown' : '';
-			const linkclass = (level === 0 && submenu.firstElementChild) ? 'menu' : '';
-			const linkurl = submenu.firstElementChild ? '#' : L.url(url, child.name);
-
-			const fullClass = subclass;
-
-		
-			const iconClass = level === 0 ? this.generateMenuIconClass(child.name) : '';
-			const finalLinkClass = linkclass + (iconClass ? ' ' + iconClass : '');
-			
-			const li = E('li', { 'class': fullClass }, [
-				E('a', { 'class': finalLinkClass, 'href': linkurl }, [_(child.title)]),
-				submenu
-			]);
-
-
-			if (level === 0 && submenu.firstElementChild) {
-				const isActive = ((L.env.dispatchpath[1] == child.name) && (L.env.dispatchpath[0] == tree.name));
-				if (isActive) {
-					li.classList.add('open');
-				}
-			}
-			
-			if (level === 0 && !submenu.firstElementChild) {
-				const isActive = ((L.env.dispatchpath[1] == child.name) && (L.env.dispatchpath[0] == tree.name));
-				if (isActive) {
-					li.classList.add('active');
-					const topLink = li.querySelector('a');
-					if (topLink) {
-						topLink.classList.add('active');
-					}
-				}
-			}
-
-	
-			if (level === 1) {
-				const isActive = ((L.env.dispatchpath[2] == child.name) && (L.env.dispatchpath[1] == tree.name));
-				if (isActive) {
-					li.classList.add('active');
-				}
-			}
-
-			if (level === 0 && submenu.firstElementChild) {
-				const menuLink = li.querySelector('a.menu');
-				menuLink.addEventListener('click', function(e) {
-					e.preventDefault();
-					e.stopPropagation();
-					const dropdown = li;
-					const isOpen = dropdown.classList.contains('open');
-					
-
-					document.querySelectorAll('#topmenu-mobile .dropdown.open').forEach(item => {
-						if (item !== dropdown) {
-							item.classList.remove('open');
-						}
-					});
-
-					if (isOpen) {
-						dropdown.classList.remove('open');
-					} else {
-						dropdown.classList.add('open');
-					}
-				});
-			}
-
-			ul.appendChild(li);
-		});
-
-		if (ul && level === 0) {
-			ul.style.display = '';
-		}
-
+		if (level === 0) ul.style.display = '';
 		return ul;
 	},
 
 	renderModeMenu(tree) {
 		const ul = document.querySelector('#modemenu');
-		if (!ul) {
-			return;
-		}
-		ul.innerHTML = '';
-		const children = ui.menu.getChildren(tree);
-
-		const isWide = this.isWideScreen();
-		if (isWide) {
-			ul.style.display = 'none';
-		}
-
-		children.forEach((child, index) => {
-			const isActive = L.env.requestpath.length
-				? child.name === L.env.requestpath[0]
-				: index === 0;
-
-			if (!isWide) {
-				ul.appendChild(E('li', { 'class': isActive ? 'active' : '' }, [
-					E('a', { 'href': L.url(child.name) }, [ _(child.title) ])
-				]));
-			}
-
-			if (isActive) {
-
-				if (isWide) {
-				this.renderMainMenu(child, child.name);
-				} else {
-					this.renderMobileMenu(child, child.name);
-				}
-			}
+		const menu = document.querySelector('#topmenu');
+		ul.replaceChildren();
+		menu.replaceChildren();
+		ui.menu.getChildren(tree).forEach((child, index) => {
+			const is_active = L.env.requestpath.length ? child.name === L.env.requestpath[0] : index === 0;
+			ul.appendChild(E('li', { 'class': is_active ? 'active' : '' }, [
+				E('a', { 'href': L.url(child.name) }, [_(child.title)])
+			]));
+			if (is_active) this.renderMainMenu(child, child.name);
 		});
-
-		if (!isWide && ul.children.length > 1)
-			ul.style.display = '';
-
-		setTimeout(() => {
-			this.autoExpandActiveMenu();
-		}, 100);
-	},
-
-	autoExpandActiveMenu() {
-		const currentPath = L.env.requestpath.join('/');
-		const menuItems = document.querySelectorAll('#topmenu .dropdown');
-		
-		menuItems.forEach(menuItem => {
-			const menuLink = menuItem.querySelector('a.menu');
-			const menuText = menuLink.textContent.trim();
-			
-			if (currentPath.includes(menuText.toLowerCase()) || 
-				this.isCurrentMenuActive(menuItem, currentPath)) {
-				menuItem.classList.add('open');
-			}
-		});
-
-
-	},
-
-	isCurrentMenuActive(menuItem, currentPath) {
-		const submenuLinks = menuItem.querySelectorAll('.dropdown-menu a');
-		for (let link of submenuLinks) {
-			const href = link.getAttribute('href');
-			if (href && currentPath.includes(href.replace('#', ''))) {
-				return true;
-			}
-		}
-		return false;
+		ul.style.display = ul.children.length > 1 ? '' : 'none';
 	}
 });

@@ -7,7 +7,9 @@
 
 #include <json-c/json.h>
 
-struct json_object *fwx_api_get_wireless_base_setting(struct json_object *req_obj);
-struct json_object *fwx_api_set_wireless_base_setting(struct json_object *req_obj);
+struct json_object *fwx_api_get_wireless_interface_info(struct json_object *req_obj);
+struct json_object *fwx_api_set_wireless_interface_info(struct json_object *req_obj);
+struct json_object *fwx_api_get_wireless_radio_info(struct json_object *req_obj);
+struct json_object *fwx_api_set_wireless_radio_info(struct json_object *req_obj);
 
 #endif

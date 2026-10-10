@@ -25,4 +25,5 @@ int fwx_send_msg_to_kernel(char *buf);
 int fwx_parse_time_str(const char *time_str, fwx_time_period_t *periods, int max_periods);
 void update_fwx_proc_value(char *key, char *value);
 void update_fwx_proc_u32_value(char *key, u_int32_t value);
+void fwx_md5(const unsigned char *data, size_t len, unsigned char digest[16]);
 #endif

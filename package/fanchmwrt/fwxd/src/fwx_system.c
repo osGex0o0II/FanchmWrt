@@ -40,6 +40,11 @@ struct json_object *fwx_api_get_system_info(struct json_object *req_obj) {
     if (ret != 0) {
         strncpy(lan_ifname, "br-lan", sizeof(lan_ifname) - 1);
     }
+
+    int tcp_rst = fwx_uci_get_int_value(uci_ctx, "fwx.global.tcp_rst");
+    if (tcp_rst != 0 && tcp_rst != 1) {
+        tcp_rst = 1;
+    }
     
     char theme_mode_str[8] = {0};
     int theme_mode = 0; // 默认值为0（light）
@@ -49,6 +54,7 @@ struct json_object *fwx_api_get_system_info(struct json_object *req_obj) {
     }
     
     json_object_object_add(fwx_obj, "lan_ifname", json_object_new_string(lan_ifname));
+    json_object_object_add(fwx_obj, "tcp_rst", json_object_new_int(tcp_rst));
     json_object_object_add(fwx_obj, "theme_mode", json_object_new_int(theme_mode));
     json_object_object_add(data_obj, "fwx", fwx_obj);
     uci_free_context(uci_ctx);
@@ -83,6 +89,16 @@ struct json_object *fwx_api_set_system_info(struct json_object *req_obj) {
         LOG_ERROR("lan_ifname length invalid\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
+
+    struct json_object *tcp_rst_obj = json_object_object_get(fwx_obj, "tcp_rst");
+    int tcp_rst = 1;
+    if (tcp_rst_obj) {
+        tcp_rst = json_object_get_int(tcp_rst_obj);
+        if (tcp_rst != 0 && tcp_rst != 1) {
+            LOG_ERROR("Invalid tcp_rst value, must be 0 or 1\n");
+            return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
+        }
+    }
     
     struct json_object *theme_mode_obj = json_object_object_get(fwx_obj, "theme_mode");
     int theme_mode = 0; // 默认值为0（light）
@@ -106,6 +122,7 @@ struct json_object *fwx_api_set_system_info(struct json_object *req_obj) {
     }
     
     fwx_uci_set_value(uci_ctx, "fwx.global.lan_ifname", (char *)lan_ifname);
+    fwx_uci_set_int_value(uci_ctx, "fwx.global.tcp_rst", tcp_rst);
     
     char theme_mode_str[8] = {0};
     snprintf(theme_mode_str, sizeof(theme_mode_str), "%d", theme_mode);
@@ -114,8 +131,9 @@ struct json_object *fwx_api_set_system_info(struct json_object *req_obj) {
     fwx_uci_commit(uci_ctx, "fwx");
 	
 	update_fwx_proc_value("lan_ifname", lan_ifname);
+	update_fwx_proc_u32_value("tcp_rst", tcp_rst);
     
     uci_free_context(uci_ctx);
-    LOG_DEBUG("Set system config: lan_ifname=%s, theme_mode=%d\n", lan_ifname, theme_mode);
+    LOG_DEBUG("Set system config: lan_ifname=%s, tcp_rst=%d, theme_mode=%d\n", lan_ifname, tcp_rst, theme_mode);
     return fwx_gen_api_response_data(API_CODE_SUCCESS, NULL);
 }

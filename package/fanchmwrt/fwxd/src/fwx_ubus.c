@@ -22,7 +22,11 @@
 #include <sqlite3.h>
 #include <time.h>
 #include "fwx_user.h"
+#include "fwx_user_summary.h"
 #include "fwx_config.h"
+#include "fwx_feature.h"
+#include "fwx_feature_online.h"
+#include "fwx_custom_feature.h"
 #include <uci.h>
 #include "fwx.h"
 #include "fwx_utils.h"
@@ -33,6 +37,7 @@
 #include "fwx_record.h"
 #include "fwx_network.h"
 #include "fwx_wireless.h"
+#include "fwx_firewall.h"
 #include "fwx_system.h"
 #include "fwx_stat.h"
 #include <fcntl.h>
@@ -42,6 +47,38 @@
 extern fwx_status_t g_fwx_status;
 extern void reload_oaf_rule(void);
 
+static int ensure_feature_data_loaded(void)
+{
+    char *feature_data = NULL;
+    size_t feature_len = 0;
+
+    if (fwx_feature_get_data(&feature_len) && feature_len > 0)
+        return 0;
+
+    if (fwx_feature_decrypt_file(FWX_FEATURE_BIN_PATH, &feature_data, &feature_len) < 0) {
+        LOG_ERROR("class_list failed: decrypt feature file failed\n");
+        return -1;
+    }
+
+    fwx_feature_replace_data(feature_data, feature_len);
+    init_app_name_table();
+    init_app_class_name_table();
+    if (fwx_custom_feature_reload() < 0)
+        LOG_WARN("class_list warning: custom feature reload failed\n");
+    else if (fwx_custom_feature_add_app_names() < 0)
+        LOG_WARN("class_list warning: custom app names init failed\n");
+
+    LOG_WARN("class_list loaded feature data without netlink\n");
+    return 0;
+}
+
+static void add_app_icon_missing_flag(struct json_object *obj, int appid)
+{
+    if (!obj || appid <= 0)
+        return;
+    if (!app_icon_exists_by_id(appid))
+        json_object_object_add(obj, "icon", json_object_new_int(0));
+}
 
 #define MAX_INTERFACE_TRAFFIC_POINTS 60
 #define INTERFACE_TRAFFIC_INTERVAL 2  
@@ -274,6 +311,7 @@ appfilter_handle_dev_visit_list(struct ubus_context *ctx, struct ubus_object *ob
         struct json_object *visit_obj = json_object_new_object();
         json_object_object_add(visit_obj, "name", json_object_new_string(get_app_name_by_id(p_info->appid)));
         json_object_object_add(visit_obj, "id", json_object_new_int(p_info->appid));
+        add_app_icon_missing_flag(visit_obj, p_info->appid);
         json_object_object_add(visit_obj, "act", json_object_new_int(p_info->action));
         json_object_object_add(visit_obj, "online", json_object_new_int(1));
         json_object_object_add(visit_obj, "ft", json_object_new_int(p_info->first_time));
@@ -288,6 +326,7 @@ appfilter_handle_dev_visit_list(struct ubus_context *ctx, struct ubus_object *ob
         struct json_object *visit_obj = json_object_new_object();
         json_object_object_add(visit_obj, "name", json_object_new_string(get_app_name_by_id(p_info->appid)));
         json_object_object_add(visit_obj, "id", json_object_new_int(p_info->appid));
+        add_app_icon_missing_flag(visit_obj, p_info->appid);
         json_object_object_add(visit_obj, "act", json_object_new_int(p_info->action));
         json_object_object_add(visit_obj, "online", json_object_new_int(0));
         json_object_object_add(visit_obj, "ft", json_object_new_int(p_info->first_time));
@@ -556,6 +595,7 @@ appfilter_handle_dev_list(struct ubus_context *ctx, struct ubus_object *obj,
                 struct json_object *app_obj = json_object_new_object();
                 json_object_object_add(app_obj, "id", json_object_new_int(top5_app_list[j].app_id));
                 json_object_object_add(app_obj, "name", json_object_new_string(get_app_name_by_id(top5_app_list[j].app_id)));
+                add_app_icon_missing_flag(app_obj, top5_app_list[j].app_id);
                 json_object_array_add(app_array, app_obj);
             }
 
@@ -622,6 +662,7 @@ static int appfilter_handle_visit_time(struct ubus_context *ctx, struct ubus_obj
     {
         struct json_object *app_info_obj = json_object_new_object();
         json_object_object_add(app_info_obj, "id", json_object_new_int(info.visit_list[i].app_id));
+        add_app_icon_missing_flag(app_info_obj, info.visit_list[i].app_id);
         json_object_object_add(app_info_obj, "name", json_object_new_string(get_app_name_by_id(info.visit_list[i].app_id)));
         json_object_object_add(app_info_obj, "t", json_object_new_int(info.visit_list[i].total_time));
         json_object_array_add(app_info_array, app_info_obj);
@@ -682,21 +723,83 @@ handle_app_class_visit_time(struct ubus_context *ctx, struct ubus_object *obj,
 }
 
 
-static int parse_feature_cfg(struct json_object *class_list) {
-    FILE *file = fopen("/tmp/feature.cfg", "r");
-    if (!file) {
-        perror("Failed to open /tmp/feature.cfg");
-        return -1;
-    }
+static char *trim_feature_space(char *text)
+{
+    char *end;
 
-	char line[1024];
-    char app_buf[128];
+    if (!text)
+        return NULL;
+    while (*text && isspace((unsigned char)*text))
+        text++;
+    end = text + strlen(text);
+    while (end > text && isspace((unsigned char)end[-1]))
+        *--end = '\0';
+    return text;
+}
+
+static int parse_feature_app_header_text(const char *line, int *app_id,
+                                         char *app_name, size_t app_name_len)
+{
+    char header[128];
+    char *slash;
+    char *id_text;
+    char *name_text;
+    char *endptr;
+    long id;
+    const char *colon;
+    size_t header_len;
+
+    if (!line || !app_id || !app_name || app_name_len == 0)
+        return -1;
+
+    colon = strchr(line, ':');
+    if (!colon)
+        return -1;
+    header_len = (size_t)(colon - line);
+    if (header_len == 0 || header_len >= sizeof(header))
+        return -1;
+
+    memcpy(header, line, header_len);
+    header[header_len] = '\0';
+    slash = strchr(header, '~');
+    if (!slash)
+        return -1;
+    *slash = '\0';
+
+    id_text = trim_feature_space(header);
+    name_text = trim_feature_space(slash + 1);
+    if (!id_text || !id_text[0] || !name_text || !name_text[0])
+        return -1;
+
+    id = strtol(id_text, &endptr, 10);
+    endptr = trim_feature_space(endptr);
+    if (id <= 0 || (endptr && endptr[0] != '\0'))
+        return -1;
+
+    *app_id = (int)id;
+    strncpy(app_name, name_text, app_name_len - 1);
+    app_name[app_name_len - 1] = '\0';
+    return 0;
+}
+static int parse_feature_cfg(struct json_object *class_list) {
+    const char *feature_data;
+    size_t feature_len = 0;
+    size_t offset = 0;
+    char line[1024];
     struct json_object *current_class = NULL;
     struct json_object *app_list = NULL;
+    struct json_object *class_map[MAX_APP_TYPE + 1] = {0};
+    int current_class_id = 0;
 
-    while (fgets(line, sizeof(line), file)) {
+    if (ensure_feature_data_loaded() < 0)
+        return -1;
 
-        line[strcspn(line, "\n")] = 0;
+    feature_data = fwx_feature_get_data(&feature_len);
+    if (!feature_data || feature_len == 0)
+        return -1;
+
+    while (fwx_feature_next_line(feature_data, feature_len, &offset,
+                                 line, sizeof(line)) != 0) {
 
         if (strncmp(line, "#class", 6) == 0) {
 
@@ -704,34 +807,31 @@ static int parse_feature_cfg(struct json_object *class_list) {
 
                 json_object_object_add(current_class, "app_list", app_list);
                 json_object_array_add(class_list, current_class);
+                if (current_class_id > 0 && current_class_id <= MAX_APP_TYPE)
+                    class_map[current_class_id] = current_class;
+                current_class = NULL;
+                app_list = NULL;
             }
 
 
-            char *name = strtok(line + 7, " ");
-            char *class_name = NULL;
-            while (name != NULL) {
-                class_name = name;  // Keep updating class_name until the last token
-                name = strtok(NULL, " ");
-            }
+            char class_key[32] = {0};
+            char class_name[64] = {0};
+            if (sscanf(line + 7, "%31s %d %63s", class_key,
+                       &current_class_id, class_name) != 3)
+                continue;
             current_class = json_object_new_object();
             json_object_object_add(current_class, "name", json_object_new_string(class_name));
             app_list = json_object_new_array();
         } else if (current_class) {
 
-            char *p_end = strstr(line, ":");
-            if (!p_end) {
-                continue;
-            }
-            strncpy(app_buf, line, p_end - line);
-            app_buf[p_end - line] = '\0';
-            char *appid_str = strtok(app_buf, " ");
-            char *name = strtok(NULL, " ");
-            if (appid_str && name) {
+            int appid = 0;
+            char app_name[64] = {0};
+            if (parse_feature_app_header_text(line, &appid, app_name, sizeof(app_name)) == 0) {
                 char combined[256];
-                char icon_path[512];
-                snprintf(icon_path, sizeof(icon_path), "/www/luci-static/resources/app_icons/%s.png", appid_str);
-                int with_icon = access(icon_path, F_OK) == 0 ? 1 : 0; 
-                snprintf(combined, sizeof(combined), "%s,%s,%d", appid_str, name, with_icon);
+                if (app_icon_exists_by_id(appid))
+                    snprintf(combined, sizeof(combined), "%d,%s", appid, app_name);
+                else
+                    snprintf(combined, sizeof(combined), "%d,%s,0", appid, app_name);
                 json_object_array_add(app_list, json_object_new_string(combined));
             }
         }
@@ -741,9 +841,12 @@ static int parse_feature_cfg(struct json_object *class_list) {
     if (current_class) {
         json_object_object_add(current_class, "app_list", app_list);
         json_object_array_add(class_list, current_class);
+        if (current_class_id > 0 && current_class_id <= MAX_APP_TYPE)
+            class_map[current_class_id] = current_class;
     }
 
-    fclose(file);
+    fwx_custom_feature_append_class_apps(class_map, MAX_APP_TYPE + 1);
+
     return 0;
 }
 
@@ -1435,6 +1538,144 @@ static int pc_is_rule_enabled(struct json_object *rule_obj)
     return enabled == 1 ? 1 : 0;
 }
 
+static int count_enabled_uci_rules(const char *package_name)
+{
+    struct uci_context *ctx = NULL;
+    struct uci_package *pkg = NULL;
+    struct uci_element *e = NULL;
+    int count = 0;
+
+    if (!package_name || package_name[0] == '\0') {
+        return 0;
+    }
+
+    ctx = uci_alloc_context();
+    if (!ctx) {
+        return 0;
+    }
+
+    if (uci_load(ctx, package_name, &pkg) != UCI_OK || !pkg) {
+        uci_free_context(ctx);
+        return 0;
+    }
+
+    uci_foreach_element(&pkg->sections, e) {
+        struct uci_section *section = uci_to_section(e);
+        struct uci_option *enabled_opt = NULL;
+        int enabled = 1;
+
+        if (!section || strcmp(section->type, "rule") != 0) {
+            continue;
+        }
+
+        enabled_opt = uci_lookup_option(ctx, section, "enabled");
+        if (enabled_opt && enabled_opt->type == UCI_TYPE_STRING && enabled_opt->v.string) {
+            enabled = atoi(enabled_opt->v.string);
+        }
+
+        if (enabled == 1) {
+            count++;
+        }
+    }
+
+    uci_unload(ctx, pkg);
+    uci_free_context(ctx);
+    return count;
+}
+
+static int count_app_visit_record_rows(void)
+{
+    sqlite3 *db = NULL;
+    sqlite3_stmt *stmt = NULL;
+    char db_path[512] = {0};
+    int count = 0;
+    int rc = SQLITE_OK;
+
+    snprintf(db_path, sizeof(db_path), "%s/client.db", get_history_data_root_dir());
+    if (access(db_path, F_OK) != 0) {
+        return 0;
+    }
+
+    rc = sqlite3_open_v2(db_path, &db, SQLITE_OPEN_READONLY, NULL);
+    if (rc != SQLITE_OK || !db) {
+        if (db) {
+            sqlite3_close(db);
+        }
+        return 0;
+    }
+
+    rc = sqlite3_prepare_v2(db, "SELECT COUNT(1) FROM app_visit_record;", -1, &stmt, NULL);
+    if (rc == SQLITE_OK && stmt && sqlite3_step(stmt) == SQLITE_ROW) {
+        count = sqlite3_column_int(stmt, 0);
+    }
+
+    if (stmt) {
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_close(db);
+    return count;
+}
+
+static const char *json_get_string_value(struct json_object *obj, const char *key)
+{
+    struct json_object *value = NULL;
+
+    if (!obj || !key || !json_object_object_get_ex(obj, key, &value) || !value) {
+        return "";
+    }
+
+    return json_object_get_string(value);
+}
+
+static int json_get_int_value(struct json_object *obj, const char *key, int default_value)
+{
+    struct json_object *value = NULL;
+
+    if (!obj || !key || !json_object_object_get_ex(obj, key, &value) || !value) {
+        return default_value;
+    }
+
+    return json_object_get_int(value);
+}
+
+static void build_dashboard_version(struct json_object *system_status, char *version, size_t len)
+{
+    const char *openwrt_version = json_get_string_value(system_status, "openwrt_version");
+    const char *fwx_version = json_get_string_value(system_status, "fwx_version");
+    const char *release_date = json_get_string_value(system_status, "release_date");
+    int release_type = json_get_int_value(system_status, "release_type", 0);
+    char openwrt_display[96] = {0};
+
+    if (!version || len == 0) {
+        return;
+    }
+
+    version[0] = '\0';
+    if (openwrt_version && strcmp(openwrt_version, "SNAPSHOT") == 0 && release_date && release_date[0]) {
+        snprintf(openwrt_display, sizeof(openwrt_display), "s%s", release_date);
+    } else if (openwrt_version && openwrt_version[0]) {
+        snprintf(openwrt_display, sizeof(openwrt_display), "%s", openwrt_version);
+    }
+
+    if (openwrt_display[0] && fwx_version && fwx_version[0]) {
+        snprintf(version, len, "%s-%s", openwrt_display, fwx_version);
+    } else if (openwrt_display[0]) {
+        snprintf(version, len, "%s", openwrt_display);
+    } else if (fwx_version && fwx_version[0]) {
+        snprintf(version, len, "%s", fwx_version);
+    } else {
+        snprintf(version, len, "--");
+    }
+
+    if (strcmp(version, "--") != 0) {
+        size_t used = strlen(version);
+        if (release_type == 1 && used + strlen("(alpha)") + 1 < len) {
+            strncat(version, "(alpha)", len - used - 1);
+        } else if (release_type == 2 && used + strlen("(beta)") + 1 < len) {
+            strncat(version, "(beta)", len - used - 1);
+        }
+    }
+}
 static int pc_is_rule_applicable(struct json_object *rule_obj, const char *target_mac)
 {
     struct json_object *mode_obj = NULL;
@@ -1449,19 +1690,19 @@ static int pc_is_rule_applicable(struct json_object *rule_obj, const char *targe
     if (json_object_object_get_ex(rule_obj, "mode", &mode_obj)) {
         mode = json_object_get_int(mode_obj);
     }
+    if (json_object_object_get_ex(rule_obj, "user_mac", &user_mac_obj)) {
+        user_mac = json_object_get_string(user_mac_obj);
+    }
+
     if (mode == 1) {
         return 1;
     }
-    if (mode != 2) {
-        return 0;
+    if (mode == 2) {
+        return (user_mac && user_mac[0] != '\0' && strcasecmp(user_mac, target_mac) == 0) ? 1 : 0;
     }
 
-    if (!json_object_object_get_ex(rule_obj, "user_mac", &user_mac_obj)) {
-        return 0;
-    }
-    user_mac = json_object_get_string(user_mac_obj);
     if (!user_mac || user_mac[0] == '\0') {
-        return 0;
+        return 1;
     }
     return strcasecmp(user_mac, target_mac) == 0 ? 1 : 0;
 }
@@ -1692,6 +1933,268 @@ static struct json_object *pc_build_blacklist_rule(const char *target_mac)
     json_object_object_add(out_obj, "permission_key", json_object_new_string(PC_PERMISSION_MAC_BLOCKED));
     json_object_object_add(out_obj, "permission_text", json_object_new_string(PC_PERMISSION_MAC_BLOCKED));
     return out_obj;
+}
+
+static struct json_object *pc_get_array_field(struct json_object *src_obj, const char *key)
+{
+    struct json_object *arr_obj = NULL;
+
+    if (!src_obj || !key || key[0] == '\0') {
+        return json_object_new_array();
+    }
+    if (json_object_object_get_ex(src_obj, key, &arr_obj) &&
+        json_object_is_type(arr_obj, json_type_array)) {
+        return json_object_get(arr_obj);
+    }
+    return json_object_new_array();
+}
+
+static struct json_object *pc_build_cached_appfilter_rule(struct json_object *detail_obj)
+{
+    struct json_object *out_obj = NULL;
+    struct json_object *condition_obj = NULL;
+    struct json_object *status_obj = NULL;
+    struct json_object *id_obj = NULL;
+    struct json_object *name_obj = NULL;
+    const char *rule_name = "";
+    int rule_id = 0;
+
+    if (!detail_obj || !json_object_is_type(detail_obj, json_type_object)) {
+        return NULL;
+    }
+
+    json_object_object_get_ex(detail_obj, "rule_id", &id_obj);
+    json_object_object_get_ex(detail_obj, "rule_name", &name_obj);
+    rule_id = id_obj ? json_object_get_int(id_obj) : 0;
+    rule_name = name_obj ? json_object_get_string(name_obj) : "";
+    if (!rule_name) {
+        rule_name = "";
+    }
+
+    out_obj = json_object_new_object();
+    condition_obj = json_object_new_object();
+    status_obj = json_object_new_object();
+    if (!out_obj || !condition_obj || !status_obj) {
+        if (out_obj) json_object_put(out_obj);
+        if (condition_obj) json_object_put(condition_obj);
+        if (status_obj) json_object_put(status_obj);
+        return NULL;
+    }
+
+    json_object_object_add(out_obj, "module", json_object_new_string("appfilter"));
+    json_object_object_add(out_obj, "rule_id", json_object_new_int(rule_id));
+    json_object_object_add(out_obj, "rule_name", json_object_new_string(rule_name));
+    json_object_object_add(out_obj, "condition_type", json_object_new_string("time_range"));
+    json_object_object_add(condition_obj, "time_rules", pc_get_array_field(detail_obj, "time_rules"));
+    json_object_object_add(out_obj, "condition", condition_obj);
+    json_object_object_add(status_obj, "matched", json_object_new_int(1));
+    json_object_object_add(out_obj, "today_status", status_obj);
+    json_object_object_add(out_obj, "permission_key", json_object_new_string(PC_PERMISSION_APP_LIMITED));
+    json_object_object_add(out_obj, "permission_text", json_object_new_string(PC_PERMISSION_APP_LIMITED));
+    return out_obj;
+}
+
+static struct json_object *pc_build_cached_macfilter_rule(struct json_object *detail_obj)
+{
+    struct json_object *out_obj = NULL;
+    struct json_object *condition_obj = NULL;
+    struct json_object *status_obj = NULL;
+    struct json_object *id_obj = NULL;
+    struct json_object *name_obj = NULL;
+    struct json_object *match_type_obj = NULL;
+    struct json_object *used_obj = NULL;
+    struct json_object *limit_obj = NULL;
+    const char *rule_name = "";
+    const char *match_type = "time_range";
+    const char *module = "macfilter";
+    int rule_id = 0;
+
+    if (!detail_obj || !json_object_is_type(detail_obj, json_type_object)) {
+        return NULL;
+    }
+
+    json_object_object_get_ex(detail_obj, "rule_id", &id_obj);
+    json_object_object_get_ex(detail_obj, "rule_name", &name_obj);
+    json_object_object_get_ex(detail_obj, "match_type", &match_type_obj);
+    rule_id = id_obj ? json_object_get_int(id_obj) : 0;
+    rule_name = name_obj ? json_object_get_string(name_obj) : "";
+    match_type = match_type_obj ? json_object_get_string(match_type_obj) : "time_range";
+    if (!rule_name) rule_name = "";
+    if (!match_type || match_type[0] == '\0') match_type = "time_range";
+    if (strcmp(match_type, "blacklist") == 0) module = "blacklist";
+
+    out_obj = json_object_new_object();
+    condition_obj = json_object_new_object();
+    status_obj = json_object_new_object();
+    if (!out_obj || !condition_obj || !status_obj) {
+        if (out_obj) json_object_put(out_obj);
+        if (condition_obj) json_object_put(condition_obj);
+        if (status_obj) json_object_put(status_obj);
+        return NULL;
+    }
+
+    json_object_object_add(out_obj, "module", json_object_new_string(module));
+    json_object_object_add(out_obj, "rule_id", json_object_new_int(rule_id));
+    json_object_object_add(out_obj, "rule_name", json_object_new_string(rule_name));
+
+    if (strcmp(match_type, "duration") == 0) {
+        int used_minutes = 0;
+        int limit_minutes = 0;
+        int progress_percent = 0;
+
+        json_object_object_get_ex(detail_obj, "used_minutes", &used_obj);
+        json_object_object_get_ex(detail_obj, "limit_minutes", &limit_obj);
+        used_minutes = used_obj ? json_object_get_int(used_obj) : 0;
+        limit_minutes = limit_obj ? json_object_get_int(limit_obj) : 0;
+        if (limit_minutes > 0) {
+            progress_percent = (int)(((double)used_minutes / (double)limit_minutes) * 100.0 + 0.5);
+            if (progress_percent < 0) progress_percent = 0;
+            if (progress_percent > 100) progress_percent = 100;
+        }
+
+        json_object_object_add(out_obj, "condition_type", json_object_new_string("duration"));
+        json_object_object_add(condition_obj, "duration_rules", pc_get_array_field(detail_obj, "duration_rules"));
+        json_object_object_add(status_obj, "used", json_object_new_int(used_minutes));
+        json_object_object_add(status_obj, "limit", json_object_new_int(limit_minutes));
+        json_object_object_add(status_obj, "progress_percent", json_object_new_int(progress_percent));
+        json_object_object_add(status_obj, "effective_today", json_object_new_int(1));
+        json_object_object_add(status_obj, "exceeded", json_object_new_int(1));
+        json_object_object_add(status_obj, "unlimited", json_object_new_int(0));
+    } else if (strcmp(match_type, "flow") == 0) {
+        double used_mb = 0.0;
+        double limit_mb = 0.0;
+        int progress_percent = 0;
+
+        json_object_object_get_ex(detail_obj, "used_mb", &used_obj);
+        json_object_object_get_ex(detail_obj, "limit_mb", &limit_obj);
+        used_mb = used_obj ? json_object_get_double(used_obj) : 0.0;
+        limit_mb = limit_obj ? json_object_get_double(limit_obj) : 0.0;
+        if (limit_mb > 0.0) {
+            progress_percent = (int)((used_mb / limit_mb) * 100.0 + 0.5);
+            if (progress_percent < 0) progress_percent = 0;
+            if (progress_percent > 100) progress_percent = 100;
+        }
+
+        json_object_object_add(out_obj, "condition_type", json_object_new_string("flow"));
+        json_object_object_add(condition_obj, "flow_rules", pc_get_array_field(detail_obj, "flow_rules"));
+        json_object_object_add(status_obj, "used", json_object_new_double(used_mb));
+        json_object_object_add(status_obj, "limit", json_object_new_double(limit_mb));
+        json_object_object_add(status_obj, "progress_percent", json_object_new_int(progress_percent));
+        json_object_object_add(status_obj, "effective_today", json_object_new_int(1));
+        json_object_object_add(status_obj, "exceeded", json_object_new_int(1));
+        json_object_object_add(status_obj, "unlimited", json_object_new_int(0));
+    } else if (strcmp(match_type, "blacklist") == 0) {
+        json_object_object_add(out_obj, "condition_type", json_object_new_string("blacklist"));
+        json_object_object_add(status_obj, "matched", json_object_new_int(1));
+    } else {
+        json_object_object_add(out_obj, "condition_type", json_object_new_string("time_range"));
+        json_object_object_add(condition_obj, "time_rules", pc_get_array_field(detail_obj, "time_rules"));
+        json_object_object_add(status_obj, "matched", json_object_new_int(1));
+    }
+
+    json_object_object_add(out_obj, "condition", condition_obj);
+    json_object_object_add(out_obj, "today_status", status_obj);
+    json_object_object_add(out_obj, "permission_key", json_object_new_string(PC_PERMISSION_MAC_BLOCKED));
+    json_object_object_add(out_obj, "permission_text", json_object_new_string(PC_PERMISSION_MAC_BLOCKED));
+    return out_obj;
+}
+
+static int pc_add_cached_rules(struct json_object *list_obj, struct json_object *rules_obj, int appfilter)
+{
+    int i;
+    int len;
+    int count = 0;
+
+    if (!list_obj || !rules_obj || !json_object_is_type(rules_obj, json_type_array)) {
+        return 0;
+    }
+
+    len = json_object_array_length(rules_obj);
+    for (i = 0; i < len; i++) {
+        struct json_object *detail_obj = json_object_array_get_idx(rules_obj, i);
+        struct json_object *item_obj = appfilter ?
+            pc_build_cached_appfilter_rule(detail_obj) : pc_build_cached_macfilter_rule(detail_obj);
+        if (item_obj) {
+            json_object_array_add(list_obj, item_obj);
+            count++;
+        }
+    }
+
+    return count;
+}
+
+static int pc_append_array_items(struct json_object *dst_obj, struct json_object *src_obj)
+{
+    int i;
+    int len;
+    int count = 0;
+
+    if (!dst_obj || !src_obj || !json_object_is_type(dst_obj, json_type_array) ||
+        !json_object_is_type(src_obj, json_type_array)) {
+        return 0;
+    }
+
+    len = json_object_array_length(src_obj);
+    for (i = 0; i < len; i++) {
+        struct json_object *item_obj = json_object_array_get_idx(src_obj, i);
+        if (item_obj && json_object_is_type(item_obj, json_type_object)) {
+            json_object_array_add(dst_obj, json_object_get(item_obj));
+            count++;
+        }
+    }
+
+    return count;
+}
+
+static struct json_object *pc_build_appfilter_rule_detail_summary(struct json_object *rule_obj)
+{
+    struct json_object *detail_obj = NULL;
+    struct json_object *id_obj = NULL;
+    struct json_object *name_obj = NULL;
+    struct json_object *mode_obj = NULL;
+    struct json_object *user_mac_obj = NULL;
+    struct json_object *time_rules_obj = NULL;
+    struct json_object *app_ids_obj = NULL;
+    const char *rule_name = "";
+    const char *user_mac = "";
+    int app_count = 0;
+
+    if (!rule_obj || !json_object_is_type(rule_obj, json_type_object)) {
+        return NULL;
+    }
+
+    detail_obj = json_object_new_object();
+    if (!detail_obj) {
+        return NULL;
+    }
+
+    json_object_object_get_ex(rule_obj, "id", &id_obj);
+    json_object_object_get_ex(rule_obj, "name", &name_obj);
+    json_object_object_get_ex(rule_obj, "mode", &mode_obj);
+    json_object_object_get_ex(rule_obj, "user_mac", &user_mac_obj);
+    json_object_object_get_ex(rule_obj, "time_rules", &time_rules_obj);
+    json_object_object_get_ex(rule_obj, "app_ids", &app_ids_obj);
+
+    rule_name = name_obj ? json_object_get_string(name_obj) : "";
+    user_mac = user_mac_obj ? json_object_get_string(user_mac_obj) : "";
+    if (!rule_name) rule_name = "";
+    if (!user_mac) user_mac = "";
+    if (app_ids_obj && json_object_is_type(app_ids_obj, json_type_array)) {
+        app_count = json_object_array_length(app_ids_obj);
+    }
+
+    json_object_object_add(detail_obj, "rule_id", json_object_new_int(id_obj ? json_object_get_int(id_obj) : 0));
+    json_object_object_add(detail_obj, "rule_name", json_object_new_string(rule_name));
+    json_object_object_add(detail_obj, "mode", json_object_new_int(mode_obj ? json_object_get_int(mode_obj) : 1));
+    json_object_object_add(detail_obj, "user_mac", json_object_new_string(user_mac));
+    json_object_object_add(detail_obj, "time_rules",
+        (time_rules_obj && json_object_is_type(time_rules_obj, json_type_array)) ?
+            json_object_get(time_rules_obj) : json_object_new_array());
+    json_object_object_add(detail_obj, "category_ids", json_object_new_array());
+    json_object_object_add(detail_obj, "category_stats", json_object_new_array());
+    json_object_object_add(detail_obj, "category_count", json_object_new_int(0));
+    json_object_object_add(detail_obj, "app_count", json_object_new_int(app_count));
+    return detail_obj;
 }
 
 static int pc_get_module_order(const char *module)
@@ -1977,6 +2480,7 @@ void all_users_callback(void *arg, client_node_t *client)
             json_object_object_add(app_obj, "id", json_object_new_int(top5_app_list[i].app_id));
             const char *app_name = get_app_name_by_id(top5_app_list[i].app_id);
             json_object_object_add(app_obj, "name", json_object_new_string(app_name));
+            add_app_icon_missing_flag(app_obj, top5_app_list[i].app_id);
 
             json_object_array_add(app_array, app_obj);
             app_count++;
@@ -1992,6 +2496,8 @@ void all_users_callback(void *arg, client_node_t *client)
             const char *app_name = get_app_name_by_id(client->visiting_app);
             json_object_object_add(user_obj, "app_id", json_object_new_int(client->visiting_app));
             json_object_object_add(user_obj, "app", json_object_new_string(app_name));
+            if (!app_icon_exists_by_id(client->visiting_app))
+                json_object_object_add(user_obj, "app_icon", json_object_new_int(0));
             LOG_DEBUG("all_users_callback: Added visiting app=%s (id=%d), url=%s for mac=%s\n", 
                    app_name, client->visiting_app, client->visiting_url, client->mac);
         } else {
@@ -2264,6 +2770,59 @@ struct json_object *fwx_api_set_nickname(struct json_object *req_obj) {
     return fwx_gen_api_response_data(API_CODE_SUCCESS, NULL);
 }
 
+struct json_object *fwx_api_get_nickname_list(struct json_object *req_obj)
+{
+    struct json_object *data_obj = json_object_new_object();
+    struct json_object *list_obj = json_object_new_array();
+    struct uci_context *uci_ctx = NULL;
+    int num = 0;
+    int i = 0;
+
+    (void)req_obj;
+
+    if (!data_obj || !list_obj) {
+        if (data_obj) {
+            json_object_put(data_obj);
+        }
+        if (list_obj) {
+            json_object_put(list_obj);
+        }
+        return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
+    }
+
+    uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        json_object_put(data_obj);
+        json_object_put(list_obj);
+        return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
+    }
+
+    num = fwx_uci_get_list_num(uci_ctx, "user_info", "user_info");
+    for (i = 0; i < num; i++) {
+        char mac[128] = {0};
+        char nickname[128] = {0};
+        struct json_object *item_obj = NULL;
+
+        fwx_uci_get_array_value(uci_ctx, "user_info.@user_info[%d].mac", i, mac, sizeof(mac));
+        fwx_uci_get_array_value(uci_ctx, "user_info.@user_info[%d].nickname", i, nickname, sizeof(nickname));
+        if (mac[0] == '\0' || nickname[0] == '\0') {
+            continue;
+        }
+
+        item_obj = json_object_new_object();
+        if (!item_obj) {
+            continue;
+        }
+        json_object_object_add(item_obj, "mac", json_object_new_string(mac));
+        json_object_object_add(item_obj, "nickname", json_object_new_string(nickname));
+        json_object_array_add(list_obj, item_obj);
+    }
+
+    uci_free_context(uci_ctx);
+    json_object_object_add(data_obj, "list", list_obj);
+    return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
+}
+
 struct json_object *fwx_api_get_mac_blacklist(struct json_object *req_obj)
 {
     char macs[MAX_SUPPORT_DEV_NUM][32] = {{0}};
@@ -2483,6 +3042,7 @@ struct json_object *fwx_api_dev_visit_list(struct json_object *req_obj) {
         struct json_object *visit_obj = json_object_new_object();
         json_object_object_add(visit_obj, "name", json_object_new_string(get_app_name_by_id(p_info->appid)));
         json_object_object_add(visit_obj, "id", json_object_new_int(p_info->appid));
+        add_app_icon_missing_flag(visit_obj, p_info->appid);
         json_object_object_add(visit_obj, "act", json_object_new_int(p_info->action));
         json_object_object_add(visit_obj, "online", json_object_new_int(1));
         json_object_object_add(visit_obj, "ft", json_object_new_int(p_info->first_time));
@@ -2497,6 +3057,7 @@ struct json_object *fwx_api_dev_visit_list(struct json_object *req_obj) {
         struct json_object *visit_obj = json_object_new_object();
         json_object_object_add(visit_obj, "name", json_object_new_string(get_app_name_by_id(p_info->appid)));
         json_object_object_add(visit_obj, "id", json_object_new_int(p_info->appid));
+        add_app_icon_missing_flag(visit_obj, p_info->appid);
         json_object_object_add(visit_obj, "act", json_object_new_int(p_info->action));
         json_object_object_add(visit_obj, "online", json_object_new_int(0));
         json_object_object_add(visit_obj, "ft", json_object_new_int(p_info->first_time));
@@ -2617,6 +3178,7 @@ struct json_object *fwx_api_get_active_app_records(struct json_object *req_obj) 
             json_object_object_add(item_obj, "nickname", json_object_new_string(records[i].nickname));
             json_object_object_add(item_obj, "name", json_object_new_string(get_app_name_by_id(records[i].appid)));
             json_object_object_add(item_obj, "id", json_object_new_int(records[i].appid));
+            add_app_icon_missing_flag(item_obj, records[i].appid);
             json_object_object_add(item_obj, "act", json_object_new_int(records[i].action));
             json_object_object_add(item_obj, "online", json_object_new_int(1));
             json_object_object_add(item_obj, "ft", json_object_new_int(records[i].first_time));
@@ -2822,6 +3384,7 @@ struct json_object *fwx_api_get_app_history_records(struct json_object *req_obj)
             json_object_object_add(item_obj, "nickname", json_object_new_string(nickname ? nickname : ""));
             json_object_object_add(item_obj, "name", json_object_new_string(get_app_name_by_id(row_appid)));
             json_object_object_add(item_obj, "id", json_object_new_int(row_appid));
+            add_app_icon_missing_flag(item_obj, row_appid);
             json_object_object_add(item_obj, "act", json_object_new_int(row_action));
             json_object_object_add(item_obj, "online", json_object_new_int(0));
             json_object_object_add(item_obj, "ft", json_object_new_int(row_start));
@@ -2891,6 +3454,7 @@ struct json_object *fwx_api_dev_visit_time(struct json_object *req_obj) {
     for (i = 0; i < info.num; i++) {
         struct json_object *app_info_obj = json_object_new_object();
         json_object_object_add(app_info_obj, "id", json_object_new_int(info.visit_list[i].app_id));
+        add_app_icon_missing_flag(app_info_obj, info.visit_list[i].app_id);
         json_object_object_add(app_info_obj, "name", json_object_new_string(get_app_name_by_id(info.visit_list[i].app_id)));
         json_object_object_add(app_info_obj, "t", json_object_new_int(info.visit_list[i].total_time));
         json_object_array_add(app_info_array, app_info_obj);
@@ -2966,6 +3530,7 @@ struct json_object *fwx_api_dev_list(struct json_object *req_obj) {
                 break;
             struct json_object *visit_info_obj = json_object_new_object();
             json_object_object_add(visit_info_obj, "appid", json_object_new_int(top5_app_list[i].app_id));
+            add_app_icon_missing_flag(visit_info_obj, top5_app_list[i].app_id);
             json_object_object_add(visit_info_obj, "appname", json_object_new_string(get_app_name_by_id(top5_app_list[i].app_id)));
             json_object_object_add(visit_info_obj, "latest_time", json_object_new_int64(top5_app_list[i].total_time));
             json_object_array_add(visit_info_array, visit_info_obj);
@@ -2992,6 +3557,94 @@ struct json_object *fwx_api_class_list(struct json_object *req_obj) {
     json_object_object_add(response, "class_list", class_list);
     
     return fwx_gen_api_response_data(API_CODE_SUCCESS, response);
+}
+
+struct json_object *fwx_api_get_app_names(struct json_object *req_obj) {
+    struct json_object *app_ids_obj = NULL;
+    struct json_object *data_obj = NULL;
+    struct json_object *name_list = NULL;
+    int i;
+    int app_count;
+
+    if (!req_obj ||
+        !json_object_object_get_ex(req_obj, "app_ids", &app_ids_obj) ||
+        !json_object_is_type(app_ids_obj, json_type_array)) {
+        return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
+    }
+
+    data_obj = json_object_new_object();
+    name_list = json_object_new_array();
+    if (!data_obj || !name_list) {
+        if (data_obj)
+            json_object_put(data_obj);
+        if (name_list)
+            json_object_put(name_list);
+        return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
+    }
+
+    app_count = json_object_array_length(app_ids_obj);
+    for (i = 0; i < app_count; i++) {
+        struct json_object *app_id_obj = json_object_array_get_idx(app_ids_obj, i);
+        int app_id = app_id_obj ? json_object_get_int(app_id_obj) : 0;
+        const char *app_name = get_app_name_by_id_exact(app_id);
+
+        json_object_array_add(name_list, json_object_new_string(app_name ? app_name : ""));
+    }
+
+    json_object_object_add(data_obj, "name_list", name_list);
+    return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
+}
+
+static struct json_object *build_feature_info_object(void)
+{
+    struct json_object *data_obj = json_object_new_object();
+    const char *feature_data;
+    size_t feature_len = 0;
+    size_t offset = 0;
+    char line[1024];
+    char version[64] = {0};
+    int feature_type = 0;
+    int feature_free = 0;
+    int loaded = 0;
+    int line_ret;
+
+    feature_data = fwx_feature_get_data(&feature_len);
+    if (feature_data && feature_len > 0) {
+        loaded = 1;
+        while ((line_ret = fwx_feature_next_line(feature_data, feature_len, &offset,
+                                                 line, sizeof(line))) != 0) {
+            if (line_ret < 0)
+                continue;
+            if (!line[0])
+                continue;
+            if (!strncmp(line, "#version ", 9)) {
+                sscanf(line, "#version %63s", version);
+            } else if (!strncmp(line, "#type ", 6)) {
+                sscanf(line, "#type %d", &feature_type);
+                if (feature_type != 0 && feature_type != 1)
+                    feature_type = 0;
+            } else if (!strncmp(line, "#free ", 6)) {
+                sscanf(line, "#free %d", &feature_free);
+                feature_free = feature_free ? 1 : 0;
+            }
+        }
+    }
+
+    json_object_object_add(data_obj, "loaded", json_object_new_int(loaded));
+    json_object_object_add(data_obj, "version", json_object_new_string(version));
+    json_object_object_add(data_obj, "type", json_object_new_int(feature_type));
+    json_object_object_add(data_obj, "free", json_object_new_int(feature_free));
+    json_object_object_add(data_obj, "format", json_object_new_string("v4.0"));
+    json_object_object_add(data_obj, "app_count", json_object_new_int(g_app_count));
+    return data_obj;
+}
+
+struct json_object *fwx_api_get_feature_info(struct json_object *req_obj) {
+    struct json_object *data_obj = NULL;
+
+    (void)req_obj;
+    data_obj = build_feature_info_object();
+    return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
 
@@ -3111,10 +3764,17 @@ struct json_object *fwx_api_get_parental_control_detail(struct json_object *req_
     struct json_object *root_obj = NULL;
     struct json_object *users_obj = NULL;
     struct json_object *user_obj = NULL;
+    struct json_object *global_app_rules_obj = NULL;
+    struct json_object *global_mac_rules_obj = NULL;
+    struct json_object *app_rules_resp = NULL;
+    struct json_object *app_rules = NULL;
+    int current_weekday = 0;
+    int current_minutes = 0;
     int blacklist_hit = 0;
     int af_whitelist = 0;
     int mf_whitelist = 0;
-
+    int i;
+    int len;
     if (!data_obj || !appfilter_rules_out || !macfilter_rules_out) {
         if (data_obj) json_object_put(data_obj);
         if (appfilter_rules_out) json_object_put(appfilter_rules_out);
@@ -3149,6 +3809,11 @@ struct json_object *fwx_api_get_parental_control_detail(struct json_object *req_
             fclose(fp);
         }
 
+        if (root_obj) {
+            json_object_object_get_ex(root_obj, "appfilter_all_user_rules", &global_app_rules_obj);
+            json_object_object_get_ex(root_obj, "macfilter_all_user_rules", &global_mac_rules_obj);
+        }
+
         if (root_obj && json_object_object_get_ex(root_obj, "users", &users_obj)) {
             user_obj = find_user_detail_by_mac(users_obj, mac);
             if (user_obj) {
@@ -3168,17 +3833,32 @@ struct json_object *fwx_api_get_parental_control_detail(struct json_object *req_
                 if (!af_whitelist &&
                     json_object_object_get_ex(user_obj, "appfilter_rules", &app_rules_obj) &&
                     json_object_is_type(app_rules_obj, json_type_array)) {
-                    json_object_put(appfilter_rules_out);
-                    appfilter_rules_out = json_object_get(app_rules_obj);
+                    struct json_object *tmp_rules_out = json_object_new_array();
+                    if (tmp_rules_out) {
+                        pc_append_array_items(tmp_rules_out, app_rules_obj);
+                        json_object_put(appfilter_rules_out);
+                        appfilter_rules_out = tmp_rules_out;
+                    }
                 }
 
                 if (!mf_whitelist &&
                     json_object_object_get_ex(user_obj, "macfilter_rules", &mac_rules_obj) &&
                     json_object_is_type(mac_rules_obj, json_type_array)) {
-                    json_object_put(macfilter_rules_out);
-                    macfilter_rules_out = json_object_get(mac_rules_obj);
+                    struct json_object *tmp_rules_out = json_object_new_array();
+                    if (tmp_rules_out) {
+                        pc_append_array_items(tmp_rules_out, mac_rules_obj);
+                        json_object_put(macfilter_rules_out);
+                        macfilter_rules_out = tmp_rules_out;
+                    }
                 }
             }
+        }
+
+        if (!af_whitelist) {
+            pc_append_array_items(appfilter_rules_out, global_app_rules_obj);
+        }
+        if (!mf_whitelist) {
+            pc_append_array_items(macfilter_rules_out, global_mac_rules_obj);
         }
 
         if (blacklist_hit && !mf_whitelist) {
@@ -3198,9 +3878,40 @@ struct json_object *fwx_api_get_parental_control_detail(struct json_object *req_
             }
         }
 
+        if (!af_whitelist && json_object_array_length(appfilter_rules_out) == 0) {
+            pc_get_current_time_context(&current_weekday, &current_minutes);
+            app_rules_resp = fwx_api_get_filter_rules(NULL);
+            app_rules = pc_get_response_list(app_rules_resp, "list");
+            if (app_rules) {
+                len = json_object_array_length(app_rules);
+                for (i = 0; i < len; i++) {
+                    struct json_object *rule_obj = json_object_array_get_idx(app_rules, i);
+                    struct json_object *time_rules_obj = NULL;
+                    struct json_object *detail_obj = NULL;
+
+                    if (!pc_is_rule_enabled(rule_obj) || !pc_is_rule_applicable(rule_obj, mac)) {
+                        continue;
+                    }
+                    json_object_object_get_ex(rule_obj, "time_rules", &time_rules_obj);
+                    if (!pc_is_time_rule_matched(time_rules_obj, current_weekday, current_minutes)) {
+                        continue;
+                    }
+
+                    detail_obj = pc_build_appfilter_rule_detail_summary(rule_obj);
+                    if (detail_obj) {
+                        json_object_array_add(appfilter_rules_out, detail_obj);
+                        status_key = PC_PERMISSION_APP_LIMITED;
+                    }
+                }
+            }
+        }
+
         status_key = apply_whitelist_pc_status(status_key, af_whitelist, mf_whitelist);
     }
 
+    if (app_rules_resp) {
+        json_object_put(app_rules_resp);
+    }
     if (json_buf) {
         free(json_buf);
     }
@@ -3227,8 +3938,12 @@ struct json_object *fwx_api_get_user_parental_control_rules(struct json_object *
     int current_minutes = 0;
     struct json_object *app_rules_resp = NULL;
     struct json_object *mac_rules_resp = NULL;
+    struct json_object *detail_req = NULL;
+    struct json_object *detail_resp = NULL;
+    struct json_object *detail_data = NULL;
     struct json_object *app_rules = NULL;
     struct json_object *mac_rules = NULL;
+    struct json_object *cached_rules = NULL;
     unsigned long long today_online_time = 0;
     unsigned long long today_active_time = 0;
     unsigned long long today_up_bytes = 0;
@@ -3237,6 +3952,7 @@ struct json_object *fwx_api_get_user_parental_control_rules(struct json_object *
     int len;
     int af_whitelist = 0;
     int mf_whitelist = 0;
+    int cache_rule_count = 0;
 
     if (!data_obj || !list_obj) {
         if (data_obj) json_object_put(data_obj);
@@ -3261,7 +3977,23 @@ struct json_object *fwx_api_get_user_parental_control_rules(struct json_object *
         pc_get_today_usage_by_mac(target_mac, &today_online_time, &today_active_time,
                                   &today_up_bytes, &today_down_bytes);
 
-        if (!af_whitelist) {
+        detail_req = json_object_new_object();
+        if (detail_req) {
+            json_object_object_add(detail_req, "mac", json_object_new_string(target_mac));
+            detail_resp = fwx_api_get_parental_control_detail(detail_req);
+            detail_data = pc_get_response_data(detail_resp);
+            if (detail_data) {
+                if (!af_whitelist && json_object_object_get_ex(detail_data, "appfilter_rules", &cached_rules)) {
+                    cache_rule_count += pc_add_cached_rules(list_obj, cached_rules, 1);
+                }
+                cached_rules = NULL;
+                if (!mf_whitelist && json_object_object_get_ex(detail_data, "macfilter_rules", &cached_rules)) {
+                    cache_rule_count += pc_add_cached_rules(list_obj, cached_rules, 0);
+                }
+            }
+        }
+
+        if (cache_rule_count <= 0 && !af_whitelist) {
             app_rules_resp = fwx_api_get_filter_rules(NULL);
             app_rules = pc_get_response_list(app_rules_resp, "list");
             if (app_rules) {
@@ -3282,7 +4014,7 @@ struct json_object *fwx_api_get_user_parental_control_rules(struct json_object *
             }
         }
 
-        if (!mf_whitelist) {
+        if (cache_rule_count <= 0 && !mf_whitelist) {
             mac_rules_resp = fwx_api_get_mac_filter_rules(NULL);
             mac_rules = pc_get_response_list(mac_rules_resp, "list");
             if (mac_rules) {
@@ -3328,6 +4060,12 @@ struct json_object *fwx_api_get_user_parental_control_rules(struct json_object *
     }
     if (mac_rules_resp) {
         json_object_put(mac_rules_resp);
+    }
+    if (detail_resp) {
+        json_object_put(detail_resp);
+    }
+    if (detail_req) {
+        json_object_put(detail_req);
     }
 
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
@@ -3486,6 +4224,7 @@ struct json_object *fwx_api_visit_list(struct json_object *req_obj) {
             struct json_object *visit_obj = json_object_new_object();
             json_object_object_add(visit_obj, "appname", json_object_new_string(get_app_name_by_id(p_info->appid)));
             json_object_object_add(visit_obj, "appid", json_object_new_int(p_info->appid));
+            add_app_icon_missing_flag(visit_obj, p_info->appid);
             json_object_object_add(visit_obj, "latest_action", json_object_new_int(p_info->action));
             json_object_object_add(visit_obj, "online", json_object_new_int(1));
             json_object_object_add(visit_obj, "first_time", json_object_new_int(p_info->first_time));
@@ -3502,6 +4241,7 @@ struct json_object *fwx_api_visit_list(struct json_object *req_obj) {
             struct json_object *visit_obj = json_object_new_object();
             json_object_object_add(visit_obj, "appname", json_object_new_string(get_app_name_by_id(p_info->appid)));
             json_object_object_add(visit_obj, "appid", json_object_new_int(p_info->appid));
+            add_app_icon_missing_flag(visit_obj, p_info->appid);
             json_object_object_add(visit_obj, "latest_action", json_object_new_int(p_info->action));
             json_object_object_add(visit_obj, "online", json_object_new_int(0));
             json_object_object_add(visit_obj, "first_time", json_object_new_int(p_info->first_time));
@@ -4386,13 +5126,13 @@ static int parse_tempinfo_output(char *output, int *cpu_temp, int *wifi_temp) {
 
     char *cpu_label = strstr(output, "CPU:");
     if (cpu_label) {
-        cpu_label += 4; // 跳过 "CPU:"
+        cpu_label += 4; 
 
         while (*cpu_label == ' ' || *cpu_label == '\t') {
             cpu_label++;
         }
 
-        char *celsius_pos = strstr(cpu_label, "°C");
+        char *celsius_pos = strstr(cpu_label, "");
         if (celsius_pos && celsius_pos > cpu_label) {
 
             char temp_str[64] = {0};
@@ -4403,7 +5143,7 @@ static int parse_tempinfo_output(char *output, int *cpu_temp, int *wifi_temp) {
 
                 float cpu_temp_float = 0.0;
                 if (sscanf(temp_str, "%f", &cpu_temp_float) == 1) {
-                    *cpu_temp = (int)(cpu_temp_float + 0.5); // 四舍五入
+                    *cpu_temp = (int)(cpu_temp_float + 0.5); 
 
                     if (*cpu_temp < -50 || *cpu_temp > 150) {
                         *cpu_temp = -1;
@@ -4416,13 +5156,13 @@ static int parse_tempinfo_output(char *output, int *cpu_temp, int *wifi_temp) {
 
     char *wifi_label = strstr(output, "WiFi:");
     if (wifi_label) {
-        wifi_label += 5; // 跳过 "WiFi:"
+        wifi_label += 5;
 
         while (*wifi_label == ' ' || *wifi_label == '\t') {
             wifi_label++;
         }
 
-        char *celsius_pos = strstr(wifi_label, "°C");
+        char *celsius_pos = strstr(wifi_label, "");
         if (celsius_pos && celsius_pos > wifi_label) {
 
             char temp_str[64] = {0};
@@ -4433,7 +5173,7 @@ static int parse_tempinfo_output(char *output, int *cpu_temp, int *wifi_temp) {
 
                 float wifi_temp_float = 0.0;
                 if (sscanf(temp_str, "%f", &wifi_temp_float) == 1) {
-                    *wifi_temp = (int)(wifi_temp_float + 0.5); // 四舍五入
+                    *wifi_temp = (int)(wifi_temp_float + 0.5); 
 
                     if (*wifi_temp < -50 || *wifi_temp > 150) {
                         *wifi_temp = -1;
@@ -4532,7 +5272,7 @@ static int get_cpu_temperature(void) {
 
 
 static int get_wifi_temperature(void) {
-    int cpu_temp = -1; // 这里不需要，但函数需要这个参数
+    int cpu_temp = -1; 
     int wifi_temp = -1;
     int i;
 
@@ -5110,13 +5850,24 @@ static struct json_object *get_dashboard_system_status(void) {
 
     extern struct list_head client_list;
     int online_client_num = 0;
+    int offline_client_num = 0;
     client_node_t *client = NULL;
     list_for_each_entry(client, &client_list, client) {
         if (client->online == 1) {
             online_client_num++;
+        } else {
+            offline_client_num++;
         }
     }
     json_object_object_add(system_status, "client_num", json_object_new_int(online_client_num));
+    json_object_object_add(system_status, "online_user_count", json_object_new_int(online_client_num));
+    json_object_object_add(system_status, "offline_user_count", json_object_new_int(offline_client_num));
+
+    int af_rule_count = count_enabled_uci_rules("appfilter");
+    int mf_rule_count = count_enabled_uci_rules("macfilter");
+    json_object_object_add(system_status, "af_rule_count", json_object_new_int(af_rule_count));
+    json_object_object_add(system_status, "mf_rule_count", json_object_new_int(mf_rule_count));
+    json_object_object_add(system_status, "filter_rule_count", json_object_new_int(af_rule_count + mf_rule_count));
     
 
     struct json_object *storage_obj = json_object_new_object();
@@ -5131,8 +5882,8 @@ static struct json_object *get_dashboard_system_status(void) {
             while (fgets(line, sizeof(line), df_fp)) {
                 char filesystem[256] = {0};
                 unsigned long long total_kb = 0, used_kb = 0;
-                unsigned long long available_kb = 0;  // 仅用于解析，不返回
-                int use_percent = 0;  // 仅用于解析，不返回
+                unsigned long long available_kb = 0;  
+                int use_percent = 0;  
                 char mount_point[256] = {0};
                 
 
@@ -5316,10 +6067,14 @@ static struct json_object *get_dashboard_active_app(void) {
     struct json_object *active_app = json_object_new_object();
     struct json_object *app_list = json_object_new_array();
     
+    int online_record_count = collect_active_app_visit_records(NULL, 0);
+    int offline_record_count = count_app_visit_record_rows();
     FILE *fp = fopen("/proc/net/af_active_app", "r");
     if (!fp) {
 
-        json_object_object_add(active_app, "total", json_object_new_int(0));
+        json_object_object_add(active_app, "total", json_object_new_int(online_record_count));
+        json_object_object_add(active_app, "online_total", json_object_new_int(online_record_count));
+        json_object_object_add(active_app, "offline_total", json_object_new_int(offline_record_count));
         json_object_object_add(active_app, "list", app_list);
         return active_app;
     }
@@ -5367,10 +6122,10 @@ static struct json_object *get_dashboard_active_app(void) {
         
 
         if (parsed < 10) {
-            continue; // 跳过无法解析的行
+            continue; 
         }
         if (current_time > last_update && (current_time - last_update) > 180) {
-            continue; // 跳过超时的记录（3分钟 = 180秒）
+            continue; 
         }
 
         if (parsed < 12) {
@@ -5384,6 +6139,7 @@ static struct json_object *get_dashboard_active_app(void) {
 
         struct json_object *app = json_object_new_object();
         json_object_object_add(app, "id", json_object_new_int(app_id));
+        add_app_icon_missing_flag(app, app_id);
         
 
         const char *app_name = get_app_name_by_id(app_id);
@@ -5445,7 +6201,9 @@ static struct json_object *get_dashboard_active_app(void) {
     
     fclose(fp);
     
-    json_object_object_add(active_app, "total", json_object_new_int(total_count));
+    json_object_object_add(active_app, "total", json_object_new_int(online_record_count));
+    json_object_object_add(active_app, "online_total", json_object_new_int(online_record_count));
+    json_object_object_add(active_app, "offline_total", json_object_new_int(offline_record_count));
     json_object_object_add(active_app, "list", app_list);
     
     return active_app;
@@ -5463,7 +6221,7 @@ static int compare_host_timestamp(const void *a, const void *b) {
     int ts_val_a = ts_a ? json_object_get_int(ts_a) : 0;
     int ts_val_b = ts_b ? json_object_get_int(ts_b) : 0;
     
-    return ts_val_b - ts_val_a;  // 降序排序
+    return ts_val_b - ts_val_a; 
 }
 
 static int is_invalid_active_host_value(const char *host) {
@@ -5536,13 +6294,13 @@ static struct json_object *get_dashboard_active_host(void) {
         
 
         if (parsed < 10) {
-            continue; // 跳过无法解析的行
+            continue; 
         }
         
 
         time_t current_time = time(NULL);
         if (current_time > last_update && (current_time - last_update) > 180) {
-            continue; // 跳过超时的记录（3分钟 = 180秒）
+            continue; 
         }
         
 
@@ -5946,6 +6704,7 @@ struct json_object *fwx_api_get_hourly_top_apps(struct json_object *req_obj) {
                 struct json_object *app_obj = json_object_new_object();
                 int appid = stat->hourly_top_apps[hour][i];
                 json_object_object_add(app_obj, "appid", json_object_new_int(appid));
+                add_app_icon_missing_flag(app_obj, appid);
                 const char *app_name = get_app_name_by_id(appid);
                 if (app_name) {
                     json_object_object_add(app_obj, "name", json_object_new_string(app_name));
@@ -6052,6 +6811,7 @@ struct json_object *fwx_api_get_daily_top_apps(struct json_object *req_obj) {
             struct json_object *app_obj = json_object_new_object();
             json_object_object_add(app_obj, "appid", json_object_new_int(stat->apps[i].appid));
             json_object_object_add(app_obj, "total_time", json_object_new_int64(stat->apps[i].total_time));
+            add_app_icon_missing_flag(app_obj, stat->apps[i].appid);
             const char *app_name = get_app_name_by_id(stat->apps[i].appid);
             if (app_name) {
                 json_object_object_add(app_obj, "name", json_object_new_string(app_name));
@@ -6268,7 +7028,7 @@ struct json_object *fwx_api_get_global_app_type_stats(struct json_object *req_ob
         if (!type_name) {
             
             static char default_name[32] = {0};
-            snprintf(default_name, sizeof(default_name), "分类%d", stats[i].app_type);
+            snprintf(default_name, sizeof(default_name), "Category %d", stats[i].app_type);
             type_name = default_name;
         }
         json_object_object_add(type_obj, "name", json_object_new_string(type_name));
@@ -6353,6 +7113,139 @@ struct json_object *fwx_api_get_global_traffic_stats(struct json_object *req_obj
         json_object_put(file_json);
     }
     
+    return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
+}
+
+static void get_dashboard_date_string(u_int32_t timestamp, char *date_str, size_t len)
+{
+    time_t t = (time_t)timestamp;
+    struct tm *tm_info = localtime(&t);
+
+    if (!date_str || len == 0) {
+        return;
+    }
+
+    date_str[0] = '\0';
+    if (tm_info) {
+        strftime(date_str, len, "%Y-%m-%d", tm_info);
+    }
+}
+
+static void sum_hourly_traffic_array(struct json_object *hourly_traffic,
+                                     unsigned long long *up_bytes,
+                                     unsigned long long *down_bytes)
+{
+    int i;
+    int len;
+
+    if (!up_bytes || !down_bytes) {
+        return;
+    }
+
+    if (!hourly_traffic || !json_object_is_type(hourly_traffic, json_type_array)) {
+        return;
+    }
+
+    len = json_object_array_length(hourly_traffic);
+    for (i = 0; i < len; i++) {
+        struct json_object *hour_obj = json_object_array_get_idx(hourly_traffic, i);
+        struct json_object *traffic_obj = NULL;
+        struct json_object *up_obj = NULL;
+        struct json_object *down_obj = NULL;
+
+        if (!hour_obj || !json_object_is_type(hour_obj, json_type_object)) {
+            continue;
+        }
+        if (!json_object_object_get_ex(hour_obj, "traffic", &traffic_obj) || !traffic_obj) {
+            continue;
+        }
+        if (json_object_object_get_ex(traffic_obj, "up_bytes", &up_obj) && up_obj) {
+            *up_bytes += (unsigned long long)json_object_get_int64(up_obj);
+        }
+        if (json_object_object_get_ex(traffic_obj, "down_bytes", &down_obj) && down_obj) {
+            *down_bytes += (unsigned long long)json_object_get_int64(down_obj);
+        }
+    }
+}
+
+struct json_object *fwx_api_get_history_traffic_stats(struct json_object *req_obj)
+{
+    struct json_object *days_obj = NULL;
+    struct json_object *data_obj = json_object_new_object();
+    struct json_object *list_array = json_object_new_array();
+    unsigned long long total_up = 0;
+    unsigned long long total_down = 0;
+    u_int32_t today = get_today_start_timestamp();
+    int days = 30;
+    int i;
+
+    if (req_obj && json_object_object_get_ex(req_obj, "days", &days_obj) && days_obj) {
+        days = json_object_get_int(days_obj);
+    }
+    if (days <= 0) {
+        days = 1;
+    }
+    if (days > 365) {
+        days = 365;
+    }
+
+    for (i = days - 1; i >= 0; i--) {
+        u_int32_t date = today - (u_int32_t)(i * SECONDS_PER_DAY);
+        unsigned long long day_up = 0;
+        unsigned long long day_down = 0;
+        char date_str[32] = {0};
+        struct json_object *day_obj = json_object_new_object();
+
+        get_dashboard_date_string(date, date_str, sizeof(date_str));
+
+        if (date == today) {
+            int hour;
+            traffic_stat_t traffic_array[HOURS_PER_DAY];
+
+            get_global_traffic_stats(traffic_array);
+            for (hour = 0; hour < HOURS_PER_DAY; hour++) {
+                day_up += traffic_array[hour].up_bytes;
+                day_down += traffic_array[hour].down_bytes;
+            }
+            json_object_object_add(day_obj, "is_today", json_object_new_int(1));
+        } else if (date_str[0]) {
+            char file_path[512] = {0};
+            struct json_object *file_json = NULL;
+            struct json_object *hourly_traffic = NULL;
+
+            snprintf(file_path, sizeof(file_path), "%s/global/stats/traffic_%s.json",
+                     get_history_data_root_dir(), date_str);
+            file_json = json_object_from_file(file_path);
+            if (file_json) {
+                if (json_object_object_get_ex(file_json, "hourly_traffic", &hourly_traffic)) {
+                    sum_hourly_traffic_array(hourly_traffic, &day_up, &day_down);
+                }
+                json_object_put(file_json);
+            }
+            json_object_object_add(day_obj, "is_today", json_object_new_int(0));
+        } else {
+            json_object_object_add(day_obj, "is_today", json_object_new_int(0));
+        }
+
+        total_up += day_up;
+        total_down += day_down;
+
+        json_object_object_add(day_obj, "date", json_object_new_int64(date));
+        json_object_object_add(day_obj, "date_str", json_object_new_string(date_str));
+        json_object_object_add(day_obj, "up_bytes", json_object_new_int64(day_up));
+        json_object_object_add(day_obj, "down_bytes", json_object_new_int64(day_down));
+        json_object_object_add(day_obj, "total_bytes", json_object_new_int64(day_up + day_down));
+        json_object_array_add(list_array, day_obj);
+    }
+
+    json_object_object_add(data_obj, "days", json_object_new_int(days));
+    json_object_object_add(data_obj, "start_date", json_object_new_int64(today - (u_int32_t)((days - 1) * SECONDS_PER_DAY)));
+    json_object_object_add(data_obj, "end_date", json_object_new_int64(today));
+    json_object_object_add(data_obj, "total_up_bytes", json_object_new_int64(total_up));
+    json_object_object_add(data_obj, "total_down_bytes", json_object_new_int64(total_down));
+    json_object_object_add(data_obj, "total_bytes", json_object_new_int64(total_up + total_down));
+    json_object_object_add(data_obj, "list", list_array);
+
     return fwx_gen_api_response_data(API_CODE_SUCCESS, data_obj);
 }
 
@@ -7032,6 +7925,7 @@ struct json_object *fwx_api_get_user_records(struct json_object *req_obj) {
             struct json_object *app_obj = json_object_new_object();
             json_object_object_add(app_obj, "id", json_object_new_int(appid));
             json_object_object_add(app_obj, "name", json_object_new_string(get_app_name_by_id(appid)));
+            add_app_icon_missing_flag(app_obj, appid);
             json_object_array_add(apps_obj, app_obj);
         }
         json_object_object_add(item, "recent_apps", apps_obj);
@@ -7671,20 +8565,47 @@ typedef struct fwx_api_node{
     fwx_api_method_t method;
 }fwx_api_node_t;
 
+static int fwx_validate_api_request(struct json_object *req_obj) {
+    struct json_object *copyright_obj = NULL;
+
+    if (!req_obj || !json_object_is_type(req_obj, json_type_object) ||
+        !json_object_object_get_ex(req_obj, "CopyRight", &copyright_obj) ||
+        !json_object_is_type(copyright_obj, json_type_string)) {
+        return 0;
+    }
+
+    return strcmp(json_object_get_string(copyright_obj),
+                  "www.fanchmwrt.com") == 0;
+}
+
+static void fwx_add_api_response_copyright(struct json_object *response_obj) {
+    struct json_object *code_obj = NULL;
+
+    if (!response_obj || !json_object_is_type(response_obj, json_type_object) ||
+        !json_object_object_get_ex(response_obj, "code", &code_obj) ||
+        json_object_get_int(code_obj) != API_CODE_SUCCESS) {
+        return;
+    }
+
+    json_object_object_add(response_obj, "CopyRight",
+                           json_object_new_string("www.fanchmwrt.com"));
+}
+
+static int fwx_api_need_copyright(const char *api_name) {
+    return api_name && strcmp(api_name, "class_list") == 0;
+}
+
 static void fwx_forward_to_agent(struct json_object *req_obj) {
 	char *cmd_buf = NULL;
 	if (!req_obj)
 		return;
-	LOG_WARN("forward to agent\n");
     const char *req_str = json_object_to_json_string(req_obj);
-	LOG_WARN("forward to agent req_str = %s\n", req_str);
 	int buf_len = strlen(req_str) + 128;
 	cmd_buf = (char *)malloc(buf_len);
 	if (!cmd_buf)
 		return;
     snprintf(cmd_buf, buf_len, "ubus -t 2 call fwx_agent forward '%s'", req_str);
 	
-	LOG_WARN("forward cmd buf = %s\n", cmd_buf);
   	system(cmd_buf);
 	free(cmd_buf);
 }
@@ -7696,6 +8617,7 @@ struct json_object *fwx_api_get_daily_top_apps(struct json_object *req_obj);
 struct json_object *fwx_api_delete_record_files(struct json_object *req_obj);
 struct json_object *fwx_api_get_global_app_type_stats(struct json_object *req_obj);
 struct json_object *fwx_api_get_global_traffic_stats(struct json_object *req_obj);
+struct json_object *fwx_api_get_history_traffic_stats(struct json_object *req_obj);
 struct json_object *fwx_api_get_daily_top_users(struct json_object *req_obj);
 struct json_object *fwx_api_get_active_users(struct json_object *req_obj);
 struct json_object *fwx_api_get_active_app_records(struct json_object *req_obj);
@@ -7710,6 +8632,7 @@ struct json_object *fwx_api_get_record_base(struct json_object *req_obj);
 struct json_object *fwx_api_set_record_base(struct json_object *req_obj);
 struct json_object *fwx_api_record_action(struct json_object *req_obj);
 struct json_object *fwx_api_set_nickname(struct json_object *req_obj);
+struct json_object *fwx_api_get_nickname_list(struct json_object *req_obj);
 struct json_object *fwx_api_get_mac_blacklist(struct json_object *req_obj);
 struct json_object *fwx_api_add_mac_blacklist(struct json_object *req_obj);
 struct json_object *fwx_api_del_mac_blacklist(struct json_object *req_obj);
@@ -7718,6 +8641,7 @@ struct json_object *fwx_api_dev_visit_time(struct json_object *req_obj);
 struct json_object *fwx_api_app_class_visit_time(struct json_object *req_obj);
 struct json_object *fwx_api_dev_list(struct json_object *req_obj);
 struct json_object *fwx_api_class_list(struct json_object *req_obj);
+struct json_object *fwx_api_get_app_names(struct json_object *req_obj);
 struct json_object *fwx_api_get_all_users(struct json_object *req_obj);
 struct json_object *fwx_api_get_parental_control_detail(struct json_object *req_obj);
 struct json_object *fwx_api_get_user_parental_control_rules(struct json_object *req_obj);
@@ -7735,6 +8659,15 @@ struct json_object *fwx_api_get_system_base_info(struct json_object *req_obj);
 
 
 static fwx_api_node_t fwx_api_node_list[] = {
+    {"get_custom_feature", fwx_api_get_custom_feature, 0, FWX_API_METHOD_GET},
+    {"get_custom_feature_class_list", fwx_api_get_custom_feature_class_list, 0, FWX_API_METHOD_GET},
+    {"set_custom_feature", fwx_api_set_custom_feature, 0, FWX_API_METHOD_POST},
+    {"get_feature_info", fwx_api_get_feature_info, 0, FWX_API_METHOD_GET},
+    {"get_feature_online_config", fwx_api_get_feature_online_config, 0, FWX_API_METHOD_GET},
+    {"set_feature_online_config", fwx_api_set_feature_online_config, 0, FWX_API_METHOD_POST},
+    {"get_feature_online_list", fwx_api_get_feature_online_list, 0, FWX_API_METHOD_GET},
+    {"start_feature_online_update", fwx_api_start_feature_online_update, 0, FWX_API_METHOD_POST},
+    {"get_feature_online_update_status", fwx_api_get_feature_online_update_status, 0, FWX_API_METHOD_GET},
     {"get_dashboard_common", fwx_api_get_dashboard_common, 0, FWX_API_METHOD_GET},
     {"get_history_session", fwx_api_get_history_session, 0, FWX_API_METHOD_GET},
     {"get_hourly_top_apps", fwx_api_get_hourly_top_apps, 0, FWX_API_METHOD_GET},
@@ -7742,6 +8675,7 @@ static fwx_api_node_t fwx_api_node_list[] = {
     {"delete_record_files", fwx_api_delete_record_files, 0, FWX_API_METHOD_POST},
     {"get_global_app_type_stats", fwx_api_get_global_app_type_stats, 0, FWX_API_METHOD_GET},
     {"get_global_traffic_stats", fwx_api_get_global_traffic_stats, 0, FWX_API_METHOD_GET},
+    {"get_history_traffic_stats", fwx_api_get_history_traffic_stats, 0, FWX_API_METHOD_GET},
     {"get_daily_top_users", fwx_api_get_daily_top_users, 0, FWX_API_METHOD_GET},
     {"get_active_users", fwx_api_get_active_users, 0, FWX_API_METHOD_GET},
     {"get_active_app_records", fwx_api_get_active_app_records, 0, FWX_API_METHOD_GET},
@@ -7791,11 +8725,16 @@ static fwx_api_node_t fwx_api_node_list[] = {
     {"set_lan_info", fwx_api_set_lan_info, 1, FWX_API_METHOD_POST},
     {"get_wan_info", fwx_api_get_wan_info, 0, FWX_API_METHOD_GET},
     {"set_wan_info", fwx_api_set_wan_info, 1, FWX_API_METHOD_POST},
-    {"get_wireless_base_setting", fwx_api_get_wireless_base_setting, 0, FWX_API_METHOD_GET},
-    {"set_wireless_base_setting", fwx_api_set_wireless_base_setting, 1, FWX_API_METHOD_POST},
+	{"get_firewall", fwx_api_get_firewall, 0, FWX_API_METHOD_GET},
+    {"set_firewall", fwx_api_set_firewall, 1, FWX_API_METHOD_POST},
+    {"get_wireless_interface_info", fwx_api_get_wireless_interface_info, 0, FWX_API_METHOD_GET},
+    {"set_wireless_interface_info", fwx_api_set_wireless_interface_info, 1, FWX_API_METHOD_POST},
+    {"get_wireless_radio_info", fwx_api_get_wireless_radio_info, 0, FWX_API_METHOD_GET},
+    {"set_wireless_radio_info", fwx_api_set_wireless_radio_info, 1, FWX_API_METHOD_POST},
     {"get_work_mode", fwx_api_get_work_mode, 0, FWX_API_METHOD_GET},
     {"set_work_mode", fwx_api_set_work_mode, 1, FWX_API_METHOD_POST},
     {"set_nickname", fwx_api_set_nickname, 1, FWX_API_METHOD_POST},
+    {"get_nickname_list", fwx_api_get_nickname_list, 0, FWX_API_METHOD_GET},
     {"get_mac_blacklist", fwx_api_get_mac_blacklist, 0, FWX_API_METHOD_GET},
     {"add_mac_blacklist", fwx_api_add_mac_blacklist, 1, FWX_API_METHOD_POST},
     {"del_mac_blacklist", fwx_api_del_mac_blacklist, 1, FWX_API_METHOD_POST},
@@ -7804,10 +8743,12 @@ static fwx_api_node_t fwx_api_node_list[] = {
     {"app_class_visit_time", fwx_api_app_class_visit_time, 0, FWX_API_METHOD_GET},
     {"dev_list", fwx_api_dev_list, 0, FWX_API_METHOD_GET},
     {"class_list", fwx_api_class_list, 0, FWX_API_METHOD_GET},
+    {"get_app_names", fwx_api_get_app_names, 0, FWX_API_METHOD_GET},
     {"get_all_users", fwx_api_get_all_users, 0, FWX_API_METHOD_GET},
     {"get_parental_control_detail", fwx_api_get_parental_control_detail, 0, FWX_API_METHOD_GET},
     {"get_user_parental_control_rules", fwx_api_get_user_parental_control_rules, 0, FWX_API_METHOD_GET},
     {"get_user_stat", fwx_api_get_user_stat, 0, FWX_API_METHOD_GET},
+    {"get_user_daily_summary", fwx_api_get_user_daily_summary, 0, FWX_API_METHOD_GET},
     {"get_oaf_status", fwx_api_get_oaf_status, 0, FWX_API_METHOD_GET},
     {"visit_list", fwx_api_visit_list, 0, FWX_API_METHOD_GET},
     {"get_device_list", fwx_api_get_device_list, 0, FWX_API_METHOD_GET},
@@ -7827,9 +8768,8 @@ int ubus_handle_common(struct ubus_context *ctx, struct ubus_object *obj, struct
     char *msg_obj_str = blobmsg_format_json(msg, true);
     if (!msg_obj_str) 
         return 0;
-    LOG_INFO("msg_obj_str: %s\n", msg_obj_str);
+    LOG_DEBUG("received common ubus request\n");
     struct json_object *req_obj = json_tokener_parse(msg_obj_str);
-    LOG_DEBUG("req_obj: %s\n", json_object_to_json_string(req_obj));
     if (!req_obj) {
         LOG_ERROR("Failed to parse JSON request\n");
         ubus_response_json(ctx, req, fwx_gen_api_response_data(API_CODE_ERROR, NULL));
@@ -7849,7 +8789,18 @@ int ubus_handle_common(struct ubus_context *ctx, struct ubus_object *obj, struct
         free(msg_obj_str);
         return 0;
     }
-    
+    LOG_DEBUG("req data = %s\n", json_object_get_string(req_obj));
+    if (fwx_api_need_copyright(api_name) && !fwx_validate_api_request(req_obj)) {
+        struct json_object *error_response;
+
+        LOG_INFO("Invalid or missing CopyRight in API request: %s\n", api_name);
+        error_response = fwx_gen_api_response_data(API_CODE_ERROR, NULL);
+        ubus_response_json(ctx, req, error_response);
+        json_object_put(error_response);
+        json_object_put(req_obj);
+        free(msg_obj_str);
+        return 0;
+    }
 
     struct json_object *data_obj = json_object_object_get(req_obj, "data");
     if (!data_obj) {
@@ -7872,10 +8823,13 @@ int ubus_handle_common(struct ubus_context *ctx, struct ubus_object *obj, struct
     if (api_node && api_node->handler) {
         response_obj = api_node->handler(data_obj);
         if (response_obj) {
+            fwx_add_api_response_copyright(response_obj);
             ubus_response_json(ctx, req, response_obj);
             if (api_node->forward) {
                 struct json_object *code_obj = json_object_object_get(response_obj, "code");
-                if (code_obj && json_object_get_int(code_obj) == API_CODE_SUCCESS) {
+                struct json_object *no_forward_obj = json_object_object_get(data_obj, "no_forward");
+                int no_forward = no_forward_obj ? json_object_get_int(no_forward_obj) : 0;
+                if (code_obj && json_object_get_int(code_obj) == API_CODE_SUCCESS && !no_forward) {
                     fwx_forward_to_agent(req_obj);
                 }
             }

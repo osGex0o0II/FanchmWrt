@@ -23,6 +23,8 @@ typedef struct app_name_info
 void init_app_name_table(void);
 void init_app_class_name_table(void);
 char *get_app_name_by_id(int id);
+const char *get_app_name_by_id_exact(int id);
+int app_icon_exists_by_id(int id);
 
 int appfilter_config_alloc(void);
 

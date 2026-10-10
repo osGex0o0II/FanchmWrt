@@ -18,7 +18,7 @@
 -%}
 
 <!DOCTYPE html>
-<html lang="{{ dispatcher.lang }}" {{ theme_mode && theme_mode.value == 1 ? `data-darkmode="true"` : 'false' }}>
+<html lang="{{ dispatcher.lang }}" data-darkmode="{{ theme_mode && theme_mode.value == 1 ? 'true' : 'false' }}">
 	<head>
 		<meta charset="utf-8">
 		<title>FanchmWrt</title>
@@ -32,9 +32,9 @@
 				setDarkMode(mediaQuery);
 			</script>
 		{% endif %}
-		<meta name="viewport" content="initial-scale=1.0">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link rel="stylesheet" href="{{ media }}/cascade.css">
-		<link rel="stylesheet" media="only screen and (max-device-width: 854px)" href="{{ media }}/mobile.css" />
+		<link rel="stylesheet" media="screen and (max-width: 768px)" href="{{ media }}/mobile.css" />
 		<link rel="icon" href="{{ media }}/logo_48.png" sizes="48x48">
 		<link rel="icon" href="{{ media }}/logo.svg" sizes="any">
 		{% if (node?.css): %}
@@ -47,19 +47,20 @@
 		<script src="{{ resource }}/cbi.js"></script>
 	</head>
 
-	<body class="lang_{{ dispatcher.lang }} {{ entityencode(striptags(node?.title ?? ''), true) }}" data-page="{{ entityencode(join('-', ctx.request_path), true) }}">
+	<body class="{{ !blank_page ? 'theme_layout' : '' }} lang_{{ dispatcher.lang }} {{ entityencode(striptags(node?.title ?? ''), true) }}" data-page="{{ entityencode(join('-', ctx.request_path), true) }}">
 		{% if (!blank_page): %}
 		<header style="display:none">
 			<a class="brand" href="/">{{ striptags(boardinfo.hostname ?? '?') }}</a>
-			<ul class="nav" id="topmenu-mobile" style="display:none"></ul>
 			<div id="indicators" class="pull-right"></div>
 		</header>
 
 		<div class="main-layout">
-			<nav class="sidebar-nav">
+			<nav class="sidebar-nav" id="theme-sidebar" aria-label="{{ _('Main menu') }}">
+				<a class="sidebar_brand" href="{{ dispatcher.build_url('admin/fwx_dashboard') }}">{{ striptags(boardinfo.hostname ?? 'FanchmWrt') }}</a>
 				<ul class="nav" id="topmenu" style="display:none"></ul>
 			</nav>
 			
+			<div class="content_panel">
 			<div id="maincontent" class="container">
 			{% if (getuid() == 0 && getspnam('root')?.pwdp === ''): %}
 				<div class="alert-message warning">

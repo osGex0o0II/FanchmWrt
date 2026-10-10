@@ -32,13 +32,10 @@ int get_iface_status(char *ifname, iface_status_t *status){
 
     buf = get_interface_status_buf(ifname);
     if (!buf){
-		
-    LOG_ERROR("get interface status buf error\n");
         return -1; 
     }   
     struct json_object *resp_obj = json_tokener_parse(buf);
     if (!resp_obj) {
-        LOG_ERROR("get_iface_status: failed to parse JSON\n");
         free(buf);
         return -1;
     }
@@ -59,9 +56,6 @@ int get_iface_status(char *ifname, iface_status_t *status){
 
        }
     }  
-	else{
-		LOG_ERROR("parse json error\n");
-	}
     
     if (route_array && json_object_array_length(route_array) > 0){ 
        struct json_object *route_obj = json_object_array_get_idx(route_array, 0); 

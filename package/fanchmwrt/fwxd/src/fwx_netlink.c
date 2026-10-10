@@ -16,6 +16,7 @@
 #include <libubus.h>
 #include <json-c/json.h>
 #include "fwx_user.h"
+#include "fwx_user_summary.h"
 #include "fwx_netlink.h"
 #include "fwx.h"
 #define MAX_NL_RCV_BUF_SIZE 4096
@@ -153,6 +154,8 @@ void fwx_netlink_handler(struct uloop_fd *u, unsigned int ev)
     struct timeval cur_time;
     gettimeofday(&cur_time, NULL);
     time_t cur_time_t = cur_time.tv_sec;
+    update_client_daily_summary(node, cur_time_t, total_up_bytes, total_down_bytes,
+                                REPORT_INTERVAL_SECS, json_object_object_get(root, "visit_info"));
     u_int32_t today_start = get_today_start_timestamp();
     if ((u_int32_t)cur_time.tv_sec >= today_start && ((u_int32_t)cur_time.tv_sec - today_start) < 120) {
         json_object_put(root);
