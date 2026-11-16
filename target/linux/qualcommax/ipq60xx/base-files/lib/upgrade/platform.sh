@@ -118,6 +118,7 @@ platform_do_upgrade() {
 	glinet,gl-ax1800|\
 	glinet,gl-axt1800|\
 	netgear,wax214|\
+	zn,m2|\
 	qihoo,360v6)
 		nand_do_upgrade "$1"
 		;;

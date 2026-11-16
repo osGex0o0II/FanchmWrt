@@ -229,3 +229,24 @@ define Device/yuncore_fap650
 	IMAGE/factory.ubin := append-ubi | qsdk-ipq-factory-nand
 endef
 TARGET_DEVICES += yuncore_fap650
+
+define Device/zn_m2
+	$(call Device/FitImage)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := Zhaoneng
+	DEVICE_MODEL := ZN-M2
+	DEVICE_DTS := ipq6000-zn-m2
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	SOC := ipq6000
+	DEVICE_DTS_CONFIG := config@cp03-c1
+	SUPPORTED_DEVICES += zn,m2
+	# nowifi: 不启用无线，也不需要 ath11k 驱动/board file
+	DEVICE_PACKAGES := -kmod-usb3 -kmod-usb-dwc3 -kmod-usb-dwc3-qcom -ath11k-firmware-ipq6018 -kmod-ath11k-ahb -wpad-basic-mbedtls \
+		fwxd kmod-fwx libfwx_common luci luci-theme-fanchmwrt \
+		luci-app-fwx-appfilter luci-app-fwx-dashboard luci-app-fwx-feature \
+		luci-app-fwx-macfilter luci-app-fwx-network luci-app-fwx-record \
+		luci-app-fwx-resources luci-app-fwx-user luci-app-fwx-dashboard-setting \
+		luci-app-fwx-session-stat luci-app-fwx-user-record luci-app-fwx-system
+endef
+TARGET_DEVICES += zn_m2
